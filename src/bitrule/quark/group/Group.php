@@ -9,6 +9,7 @@ final class Group {
     /**
      * @param string      $id
      * @param string      $name
+     * @param int         $priority
      * @param string|null $displayName
      * @param string|null $prefix
      * @param string|null $suffix
@@ -17,11 +18,11 @@ final class Group {
     public function __construct(
         private readonly string $id,
         private string $name,
-        private int $priority,
-        private ?string $displayName,
-        private ?string $prefix,
-        private ?string $suffix,
-        private ?string $color,
+        private int $priority = 0,
+        private ?string $displayName = null,
+        private ?string $prefix = null,
+        private ?string $suffix = null,
+        private ?string $color = null,
     ) {}
 
     /**

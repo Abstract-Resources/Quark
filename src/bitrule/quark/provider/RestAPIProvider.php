@@ -104,15 +104,6 @@ final class RestAPIProvider {
     }
 
     /**
-     * @param string $name
-     *
-     * @return Group|null
-     */
-    public function getGroupByName(string $name): ?Group {
-        return $this->groups[$name] ?? null;
-    }
-
-    /**
      * @param Group $group
      */
     public function create(Group $group): void {
@@ -120,20 +111,23 @@ final class RestAPIProvider {
             throw new RuntimeException('API key is not set');
         }
 
+        $data = [
+            'id' => $group->getId(),
+            'name' => $group->getName(),
+            'priority' => $group->getPriority()
+        ];
+
+        if ($group->getDisplayName() !== null) $data['display'] = $group->getDisplayName();
+        if ($group->getPrefix() !== null) $data['prefix'] = $group->getPrefix();
+        if ($group->getSuffix() !== null) $data['suffix'] = $group->getSuffix();
+        if ($group->getColor() !== null) $data['color'] = $group->getColor();
+
         Curl::postRequest(
             self::URL . '/groups/create',
-            [
-                'id' => $group->getId(),
-                'name' => $group->getName(),
-                'priority' => $group->getPriority(),
-                'display' => $group->getDisplayName(),
-                'prefix' => $group->getPrefix(),
-                'suffix' => $group->getSuffix(),
-                'color' => $group->getColor()
-            ],
+            $data,
             10,
             ['x-api-key' => $this->apiKey],
-            function (?InternetRequestResult $result): void {
+            function (?InternetRequestResult $result) use ($group): void {
                 if ($result === null) {
                     throw new RuntimeException('Failed to create group');
                 }
@@ -156,7 +150,18 @@ final class RestAPIProvider {
                 }
 
                 Quark::getInstance()->getLogger()->info('Provider: ' . $response['message']);
+
+                $this->groups[strtolower($group->getName())] = $group;
             }
         );
+    }
+
+    /**
+     * @param string $name
+     *
+     * @return Group|null
+     */
+    public function getGroupByName(string $name): ?Group {
+        return $this->groups[strtolower($name)] ?? null;
     }
 }
