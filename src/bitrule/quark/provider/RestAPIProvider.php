@@ -111,12 +111,11 @@ final class RestAPIProvider {
      * @return Promise<int>
      */
     public function postCreate(Group $group): Promise {
+        $promiseResolver = new PromiseResolver();
         $logger = Quark::getInstance()->getLogger();
 
-        $promiseResolver = new PromiseResolver();
-
         if ($this->apiKey === null) {
-            $promiseResolver->reject();
+            $promiseResolver->resolve(self::CODE_FORBIDDEN);
 
             $logger->error('API key is not set');
 
@@ -140,27 +139,17 @@ final class RestAPIProvider {
             10,
             ['x-api-key' => $this->apiKey],
             function (?InternetRequestResult $result) use ($logger, $promiseResolver): void {
-                if ($result === null) {
-                    $promiseResolver->reject();
-
+                $code = $result !== null ? $result->getCode() : self::CODE_NOT_FOUND;
+                if ($code === self::CODE_NOT_FOUND) {
                     $logger->error('Failed to create group');
-
-                    return;
-                }
-
-                $code = $result->getCode();
-                if ($code === self::CODE_UNAUTHORIZED) {
+                } elseif ($code === self::CODE_UNAUTHORIZED) {
                     $logger->error('This server is not authorized to create groups');
                 } elseif ($code !== self::CODE_OK) {
                     $logger->error('Failed to create group');
                 } else {
-                    $response = json_decode($result->getBody(), true);
-                    if (!is_array($response)) {
-                        throw new RuntimeException('Invalid response');
-                    }
-
-                    if (!isset($response['message'])) {
-                        throw new RuntimeException('Invalid response');
+                    $response = $result !== null ? json_decode($result->getBody(), true) : null;
+                    if (!is_array($response) || !isset($response['message'])) {
+                        $code = self::CODE_BAD_REQUEST;
                     }
                 }
 
