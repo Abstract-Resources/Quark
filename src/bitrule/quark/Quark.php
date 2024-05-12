@@ -5,7 +5,10 @@ declare(strict_types=1);
 namespace bitrule\quark;
 
 use bitrule\quark\command\GroupCommand;
-use bitrule\quark\provider\RestAPIProvider;
+use bitrule\quark\registry\GroupRegistry;
+use Exception;
+use InvalidArgumentException;
+use libasynCurl\Curl;
 use pocketmine\plugin\PluginBase;
 use pocketmine\utils\SingletonTrait;
 use pocketmine\utils\TextFormat;
@@ -23,7 +26,24 @@ final class Quark extends PluginBase {
     protected function onEnable(): void {
         self::setInstance($this);
 
-        RestAPIProvider::getInstance()->loadAll($this);
+        try {
+            Curl::register($this);
+        } catch (Exception $e) {
+            if ($e instanceof InvalidArgumentException) {
+                $this->getLogger()->warning('libasynCurl is already loaded!');
+
+                return;
+            }
+
+            $this->getLogger()->logException($e);
+        }
+
+        $apiKey = $this->getConfig()->get('api-key');
+        if (!is_string($apiKey)) {
+            throw new InvalidArgumentException('Invalid API key');
+        }
+
+        GroupRegistry::getInstance()->loadAll($apiKey);
 
         $this->getServer()->getCommandMap()->registerAll('quart', [
             new GroupCommand('group', 'Manage our network groups')

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace bitrule\quark\provider;
+namespace bitrule\quark\registry;
 
 use bitrule\quark\group\Group;
 use bitrule\quark\Quark;
@@ -14,7 +14,7 @@ use pocketmine\utils\InternetRequestResult;
 use pocketmine\utils\SingletonTrait;
 use RuntimeException;
 
-final class RestAPIProvider {
+final class GroupRegistry {
     use SingletonTrait {
         setInstance as private;
         reset as private;
@@ -37,42 +37,26 @@ final class RestAPIProvider {
     private array $groups = [];
 
     /**
-     * @param Quark $plugin
+     * @param string $apiKey The API key
      */
-    public function loadAll(Quark $plugin): void {
-        $apiKey = $plugin->getConfig()->get('api-key');
-        if (!is_string($apiKey)) {
-            throw new \InvalidArgumentException('Invalid API key');
-        }
-
+    public function loadAll(string $apiKey): void {
         $this->apiKey = $apiKey;
-
-        try {
-            Curl::register($plugin);
-        } catch (Exception $e) {
-            $plugin->getLogger()->warning('libasynCurl is already loaded!');
-            $plugin->getLogger()->logException($e);
-        }
 
         Curl::getRequest(
             self::URL . '/groups',
             10,
             ['x-api-key' => $apiKey],
-            function (?InternetRequestResult $result) use ($plugin): void {
+            function (?InternetRequestResult $result): void {
                 if ($result === null) {
                     throw new RuntimeException('Failed to fetch groups');
                 }
 
                 if ($result->getCode() === self::CODE_UNAUTHORIZED) {
-                    $plugin->getLogger()->error('This server is not authorized to fetch groups');
-
-                    return;
+                    throw new RuntimeException('This server is not authorized to fetch groups');
                 }
 
                 if ($result->getCode() !== self::CODE_OK) {
-                    $plugin->getLogger()->error('Failed to fetch groups');
-
-                    return;
+                    throw new RuntimeException('Failed to fetch groups');
                 }
 
                 $response = json_decode($result->getBody(), true);

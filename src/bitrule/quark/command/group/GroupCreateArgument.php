@@ -6,7 +6,7 @@ namespace bitrule\quark\command\group;
 
 use abstractplugin\command\Argument;
 use bitrule\quark\group\Group;
-use bitrule\quark\provider\RestAPIProvider;
+use bitrule\quark\registry\GroupRegistry;
 use bitrule\quark\Quark;
 use pocketmine\command\CommandSender;
 use pocketmine\utils\TextFormat;
@@ -27,17 +27,17 @@ final class GroupCreateArgument extends Argument {
             return;
         }
 
-        if (RestAPIProvider::getInstance()->getGroupByName($name) !== null) {
+        if (GroupRegistry::getInstance()->getGroupByName($name) !== null) {
             $sender->sendMessage(Quark::prefix() . TextFormat::RED . 'Group ' . $name . ' already exists');
 
             return;
         }
 
-        RestAPIProvider::getInstance()
+        GroupRegistry::getInstance()
             ->postCreate($group = new Group(Uuid::uuid4()->toString(), $name))
             ->onCompletion(
                 function (int $status) use ($group, $sender, $name): void {
-                    if ($status !== RestAPIProvider::CODE_OK) {
+                    if ($status !== GroupRegistry::CODE_OK) {
                         $sender->sendMessage(Quark::prefix() . TextFormat::RED . 'Failed to create group ' . $name . ' (status ' . $status . ')');
 
                         return;
@@ -45,7 +45,7 @@ final class GroupCreateArgument extends Argument {
 
                     $sender->sendMessage(Quark::prefix() . TextFormat::GREEN . 'Group ' . $name . ' created');
 
-                    RestAPIProvider::getInstance()->registerNewGroup($group);
+                    GroupRegistry::getInstance()->registerNewGroup($group);
                 },
                 fn() => $sender->sendMessage(Quark::prefix() . TextFormat::RED . 'Failed to create group ' . $name)
             );
