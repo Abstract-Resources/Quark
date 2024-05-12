@@ -33,7 +33,21 @@ final class GroupCreateArgument extends Argument {
             return;
         }
 
-        RestAPIProvider::getInstance()->create(new Group(Uuid::uuid4()->toString(), $name));
-        $sender->sendMessage(Quark::prefix() . TextFormat::GREEN . 'Group ' . $name . ' created');
+        RestAPIProvider::getInstance()
+            ->postCreate($group = new Group(Uuid::uuid4()->toString(), $name))
+            ->onCompletion(
+                function (int $status) use ($group, $sender, $name): void {
+                    if ($status !== RestAPIProvider::CODE_OK) {
+                        $sender->sendMessage(Quark::prefix() . TextFormat::RED . 'Failed to create group ' . $name . ' (status ' . $status . ')');
+
+                        return;
+                    }
+
+                    $sender->sendMessage(Quark::prefix() . TextFormat::GREEN . 'Group ' . $name . ' created');
+
+                    RestAPIProvider::getInstance()->registerNewGroup($group);
+                },
+                fn() => $sender->sendMessage(Quark::prefix() . TextFormat::RED . 'Failed to create group ' . $name)
+            );
     }
 }

@@ -8,6 +8,8 @@ use bitrule\quark\group\Group;
 use bitrule\quark\Quark;
 use Exception;
 use libasynCurl\Curl;
+use pocketmine\promise\Promise;
+use pocketmine\promise\PromiseResolver;
 use pocketmine\utils\InternetRequestResult;
 use pocketmine\utils\SingletonTrait;
 use RuntimeException;
@@ -105,10 +107,20 @@ final class RestAPIProvider {
 
     /**
      * @param Group $group
+     *
+     * @return Promise<int>
      */
-    public function create(Group $group): void {
+    public function postCreate(Group $group): Promise {
+        $logger = Quark::getInstance()->getLogger();
+
+        $promiseResolver = new PromiseResolver();
+
         if ($this->apiKey === null) {
-            throw new RuntimeException('API key is not set');
+            $promiseResolver->reject();
+
+            $logger->error('API key is not set');
+
+            return $promiseResolver->getPromise();
         }
 
         $data = [
@@ -127,33 +139,43 @@ final class RestAPIProvider {
             $data,
             10,
             ['x-api-key' => $this->apiKey],
-            function (?InternetRequestResult $result) use ($group): void {
+            function (?InternetRequestResult $result) use ($logger, $promiseResolver): void {
                 if ($result === null) {
-                    throw new RuntimeException('Failed to create group');
+                    $promiseResolver->reject();
+
+                    $logger->error('Failed to create group');
+
+                    return;
                 }
 
-                if ($result->getCode() === self::CODE_UNAUTHORIZED) {
-                    throw new RuntimeException('This server is not authorized to create groups');
+                $code = $result->getCode();
+                if ($code === self::CODE_UNAUTHORIZED) {
+                    $logger->error('This server is not authorized to create groups');
+                } elseif ($code !== self::CODE_OK) {
+                    $logger->error('Failed to create group');
+                } else {
+                    $response = json_decode($result->getBody(), true);
+                    if (!is_array($response)) {
+                        throw new RuntimeException('Invalid response');
+                    }
+
+                    if (!isset($response['message'])) {
+                        throw new RuntimeException('Invalid response');
+                    }
                 }
 
-                if ($result->getCode() !== self::CODE_OK) {
-                    throw new RuntimeException('Failed to create group');
-                }
-
-                $response = json_decode($result->getBody(), true);
-                if (!is_array($response)) {
-                    throw new RuntimeException('Invalid response');
-                }
-
-                if (!isset($response['message'])) {
-                    throw new RuntimeException('Invalid response');
-                }
-
-                Quark::getInstance()->getLogger()->info('Provider: ' . $response['message']);
-
-                $this->groups[strtolower($group->getName())] = $group;
+                $promiseResolver->resolve($code);
             }
         );
+
+        return $promiseResolver->getPromise();
+    }
+
+    /**
+     * @param Group $group
+     */
+    public function registerNewGroup(Group $group): void {
+        $this->groups[strtolower($group->getName())] = $group;
     }
 
     /**
