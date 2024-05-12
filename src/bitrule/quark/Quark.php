@@ -34,6 +34,6 @@ final class Quark extends PluginBase {
      * @return string
      */
     public static function prefix(): string {
-        return TextFormat::ESCAPE . 's' . TextFormat::BOLD . 'Quart' . TextFormat::RESET . TextFormat::DARK_GRAY . '> ';
+        return TextFormat::ESCAPE . 's' . TextFormat::BOLD . 'Quark' . TextFormat::RESET . TextFormat::DARK_GRAY . '> ';
     }
 }
