@@ -6,6 +6,7 @@ namespace bitrule\quark\command\group;
 
 use abstractplugin\command\Argument;
 use bitrule\quark\group\Group;
+use bitrule\quark\Pong;
 use bitrule\quark\registry\GroupRegistry;
 use bitrule\quark\Quark;
 use pocketmine\command\CommandSender;
@@ -36,14 +37,14 @@ final class GroupCreateArgument extends Argument {
         GroupRegistry::getInstance()
             ->postCreate($group = new Group(Uuid::uuid4()->toString(), $name))
             ->onCompletion(
-                function (int $status) use ($group, $sender, $name): void {
-                    if ($status !== GroupRegistry::CODE_OK) {
-                        $sender->sendMessage(Quark::prefix() . TextFormat::RED . 'Failed to create group ' . $name . ' (status ' . $status . ')');
+                function (Pong $pong) use ($group, $sender, $name): void {
+                    if ($pong->getStatusCode() !== GroupRegistry::CODE_OK) {
+                        $sender->sendMessage(Quark::prefix() . TextFormat::RED . 'Failed to create group ' . $name . ' (status ' . $pong->getStatusCode() . ')');
 
                         return;
                     }
 
-                    $sender->sendMessage(Quark::prefix() . TextFormat::GREEN . 'Group ' . $name . ' created');
+                    $sender->sendMessage(Quark::prefix() . TextFormat::GREEN . 'Group ' . $name . ' created in ' . round($pong->getResponseTimestamp() - $pong->getInitialTimestamp(), 2) . 'ms');
 
                     GroupRegistry::getInstance()->registerNewGroup($group);
                 },

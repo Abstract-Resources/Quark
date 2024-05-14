@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace bitrule\quark\registry;
 
 use bitrule\quark\group\Group;
+use bitrule\quark\Pong;
 use bitrule\quark\Quark;
 use libasynCurl\Curl;
 use pocketmine\promise\Promise;
@@ -110,14 +111,20 @@ final class GroupRegistry {
     /**
      * @param Group $group
      *
-     * @return Promise<int>
+     * @return Promise<Pong>
      */
     public function postCreate(Group $group): Promise {
         $promiseResolver = new PromiseResolver();
         $logger = Quark::getInstance()->getLogger();
 
+        $timestamp = microtime(true);
         if ($this->apiKey === null) {
-            $promiseResolver->resolve(self::CODE_FORBIDDEN);
+            $promiseResolver->resolve(new Pong(
+                self::CODE_FORBIDDEN,
+                $timestamp,
+                $timestamp,
+                'API key is not set'
+            ));
 
             $logger->error('API key is not set');
 
@@ -140,8 +147,9 @@ final class GroupRegistry {
             $data,
             10,
             $this->defaultHeaders,
-            function (?InternetRequestResult $result) use ($logger, $promiseResolver): void {
+            function (?InternetRequestResult $result) use ($timestamp, $logger, $promiseResolver): void {
                 $code = $result !== null ? $result->getCode() : self::CODE_NOT_FOUND;
+                $message = '';
                 if ($code === self::CODE_NOT_FOUND) {
                     $logger->error('Failed to create group');
                 } elseif ($code === self::CODE_FORBIDDEN) {
@@ -154,10 +162,17 @@ final class GroupRegistry {
                     $response = $result !== null ? json_decode($result->getBody(), true) : null;
                     if (!is_array($response) || !isset($response['message'])) {
                         $code = self::CODE_BAD_REQUEST;
+                    } else {
+                        $message = $response['message'];
                     }
                 }
 
-                $promiseResolver->resolve($code);
+                $promiseResolver->resolve(new Pong(
+                    $code,
+                    $timestamp,
+                    microtime(true),
+                        $message
+                ));
             }
         );
 
