@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace bitrule\quark;
 
 use bitrule\quark\command\GroupCommand;
+use bitrule\quark\listener\PlayerJoinListener;
+use bitrule\quark\listener\PlayerPreLoginListener;
 use bitrule\quark\registry\GroupRegistry;
 use Exception;
 use InvalidArgumentException;
@@ -18,6 +20,21 @@ final class Quark extends PluginBase {
         setInstance as private;
         reset as private;
     }
+
+    // API URL
+    public const URL = 'http://127.0.0.1:3000/api';
+
+    // HTTP status codes
+    public const CODE_OK = 200;
+    public const CODE_BAD_REQUEST = 400;
+    public const CODE_FORBIDDEN = 401;
+    public const CODE_UNAUTHORIZED = 403;
+    public const CODE_NOT_FOUND = 404;
+    public const CODE_INTERNAL_SERVER_ERROR = 500;
+
+    private array $defaultHeaders = [
+        'Content-Type: application/json'
+    ];
 
     protected function onLoad(): void {
         $this->saveDefaultConfig();
@@ -54,11 +71,23 @@ final class Quark extends PluginBase {
             throw new InvalidArgumentException('Invalid API key');
         }
 
-        GroupRegistry::getInstance()->loadAll($apiKey);
+        $this->defaultHeaders[] = 'X-API-KEY: ' . $apiKey;
+
+        GroupRegistry::getInstance()->loadAll();
 
         $this->getServer()->getCommandMap()->registerAll('quart', [
             new GroupCommand('group', 'Manage our network groups')
         ]);
+
+        $this->getServer()->getPluginManager()->registerEvents(new PlayerPreLoginListener(), $this);
+        $this->getServer()->getPluginManager()->registerEvents(new PlayerJoinListener(), $this);
+    }
+
+    /**
+     * @return array
+     */
+    public static function defaultHeaders(): array {
+        return self::getInstance()->defaultHeaders;
     }
 
     /**

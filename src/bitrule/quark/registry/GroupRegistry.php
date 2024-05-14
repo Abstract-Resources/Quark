@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace bitrule\quark\registry;
 
-use bitrule\quark\group\Group;
+use bitrule\quark\object\group\Group;
 use bitrule\quark\Pong;
 use bitrule\quark\Quark;
 use libasynCurl\Curl;
@@ -21,58 +21,37 @@ final class GroupRegistry {
         reset as private;
     }
 
-    // API URL
-    public const URL = 'http://127.0.0.1:3000/api';
-
-    // HTTP status codes
-    public const CODE_OK = 200;
-    public const CODE_BAD_REQUEST = 400;
-    public const CODE_FORBIDDEN = 401;
-    public const CODE_UNAUTHORIZED = 403;
-    public const CODE_NOT_FOUND = 404;
-    public const CODE_INTERNAL_SERVER_ERROR = 500;
-
-    private array $defaultHeaders = [
-        'Content-Type: application/json'
-    ];
-
-    private ?string $apiKey = null;
-
     /** @var array<string, Group> */
     private array $groups = [];
 
     /**
-     * @param string $apiKey The API key
+     * Requests all groups from the API
      */
-    public function loadAll(string $apiKey): void {
-        $this->apiKey = $apiKey;
-
-        $this->defaultHeaders[] = 'X-API-KEY: ' . $apiKey;
-
+    public function loadAll(): void {
         $timestamp = microtime(true);
 
         Curl::getRequest(
-            self::URL . '/groups',
+            Quark::URL . '/groups',
             10,
-            $this->defaultHeaders,
+            Quark::defaultHeaders(),
             function (?InternetRequestResult $result) use ($timestamp): void {
                 if ($result === null) {
                     throw new RuntimeException('Failed to fetch groups');
                 }
 
-                if ($result->getCode() === self::CODE_NOT_FOUND) {
+                if ($result->getCode() === Quark::CODE_NOT_FOUND) {
                     throw new RuntimeException('API Route not found');
                 }
 
-                if ($result->getCode() === self::CODE_FORBIDDEN) {
+                if ($result->getCode() === Quark::CODE_FORBIDDEN) {
                     throw new RuntimeException('API key is not set');
                 }
 
-                if ($result->getCode() === self::CODE_UNAUTHORIZED) {
+                if ($result->getCode() === Quark::CODE_UNAUTHORIZED) {
                     throw new RuntimeException('This server is not authorized to fetch groups');
                 }
 
-                if ($result->getCode() !== self::CODE_OK) {
+                if ($result->getCode() !== Quark::CODE_OK) {
                     throw new RuntimeException('Failed to fetch groups (HTTP ' . $result->getCode() . ')');
                 }
 
@@ -114,23 +93,6 @@ final class GroupRegistry {
      * @return Promise<Pong>
      */
     public function postCreate(Group $group): Promise {
-        $promiseResolver = new PromiseResolver();
-        $logger = Quark::getInstance()->getLogger();
-
-        $timestamp = microtime(true);
-        if ($this->apiKey === null) {
-            $promiseResolver->resolve(new Pong(
-                self::CODE_FORBIDDEN,
-                $timestamp,
-                $timestamp,
-                'API key is not set'
-            ));
-
-            $logger->error('API key is not set');
-
-            return $promiseResolver->getPromise();
-        }
-
         $data = [
             'id' => $group->getId(),
             'name' => $group->getName(),
@@ -142,26 +104,31 @@ final class GroupRegistry {
         if ($group->getSuffix() !== null) $data['suffix'] = $group->getSuffix();
         if ($group->getColor() !== null) $data['color'] = $group->getColor();
 
+        $timestamp = microtime(true);
+
+        $logger = Quark::getInstance()->getLogger();
+        $promiseResolver = new PromiseResolver();
+
         Curl::postRequest(
-            self::URL . '/groups/create',
+            Quark::URL . '/groups/create',
             $data,
             10,
-            $this->defaultHeaders,
+            Quark::defaultHeaders(),
             function (?InternetRequestResult $result) use ($timestamp, $logger, $promiseResolver): void {
-                $code = $result !== null ? $result->getCode() : self::CODE_NOT_FOUND;
+                $code = $result !== null ? $result->getCode() : Quark::CODE_NOT_FOUND;
                 $message = '';
-                if ($code === self::CODE_NOT_FOUND) {
+                if ($code === Quark::CODE_NOT_FOUND) {
                     $logger->error('Failed to create group');
-                } elseif ($code === self::CODE_FORBIDDEN) {
+                } elseif ($code === Quark::CODE_FORBIDDEN) {
                     $logger->error('API key is not set');
-                } elseif ($code === self::CODE_UNAUTHORIZED) {
+                } elseif ($code === Quark::CODE_UNAUTHORIZED) {
                     $logger->error('This server is not authorized to create groups');
-                } elseif ($code !== self::CODE_OK) {
+                } elseif ($code !== Quark::CODE_OK) {
                     $logger->error('Failed to create group');
                 } else {
                     $response = $result !== null ? json_decode($result->getBody(), true) : null;
                     if (!is_array($response) || !isset($response['message'])) {
-                        $code = self::CODE_BAD_REQUEST;
+                        $code = Quark::CODE_BAD_REQUEST;
                     } else {
                         $message = $response['message'];
                     }
@@ -193,5 +160,20 @@ final class GroupRegistry {
      */
     public function getGroupByName(string $name): ?Group {
         return $this->groups[strtolower($name)] ?? null;
+    }
+
+    /**
+     * @param string $id
+     *
+     * @return Group|null
+     */
+    public function getGroupById(string $id): ?Group {
+        foreach ($this->groups as $group) {
+            if ($group->getId() !== $id) continue;
+
+            return $group;
+        }
+
+        return null;
     }
 }

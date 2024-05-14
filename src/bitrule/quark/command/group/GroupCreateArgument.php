@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace bitrule\quark\command\group;
 
 use abstractplugin\command\Argument;
-use bitrule\quark\group\Group;
+use bitrule\quark\object\group\Group;
 use bitrule\quark\Pong;
-use bitrule\quark\registry\GroupRegistry;
 use bitrule\quark\Quark;
+use bitrule\quark\registry\GroupRegistry;
 use pocketmine\command\CommandSender;
 use pocketmine\utils\TextFormat;
 use Ramsey\Uuid\Uuid;
@@ -38,7 +38,7 @@ final class GroupCreateArgument extends Argument {
             ->postCreate($group = new Group(Uuid::uuid4()->toString(), $name))
             ->onCompletion(
                 function (Pong $pong) use ($group, $sender, $name): void {
-                    if ($pong->getStatusCode() !== GroupRegistry::CODE_OK) {
+                    if ($pong->getStatusCode() !== Quark::CODE_OK) {
                         $sender->sendMessage(Quark::prefix() . TextFormat::RED . 'Failed to create group ' . $name . ' (status ' . $pong->getStatusCode() . ')');
 
                         return;

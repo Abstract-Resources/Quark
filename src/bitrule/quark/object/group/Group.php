@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace bitrule\quark\group;
+namespace bitrule\quark\object\group;
 
 final class Group {
 
