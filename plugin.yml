@@ -1,7 +1,14 @@
 ---
-name: plugin_name
-author: Abstract
+name: Quark
+author: bitrule
 version: "1.0"
-api: 4.0.0
-main: main
+api: 5.0.0
+main: bitrule\quark\Quark
+permissions:
+  quark.command.group:
+    description: Allows the player to use the /quark command
+    default: true
+  quark.command.group.create:
+    description: Allows the player to use the /quark create command
+    default: true
 ...

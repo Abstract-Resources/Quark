@@ -26,6 +26,15 @@ final class Quark extends PluginBase {
     protected function onEnable(): void {
         self::setInstance($this);
 
+        $bootstrap = 'phar://' . $this->getServer()->getPluginPath() . $this->getName() . '.phar/vendor/autoload.php';
+        if (!is_file($bootstrap)) {
+            $this->getLogger()->error('Could not find autoload.php in plugin phar, directory: ' . $bootstrap);
+            $this->getServer()->getPluginManager()->disablePlugin($this);
+            return;
+        }
+
+        require_once $bootstrap;
+
         try {
             Curl::register($this);
         } catch (Exception $e) {
@@ -37,6 +46,8 @@ final class Quark extends PluginBase {
 
             $this->getLogger()->logException($e);
         }
+
+        $this->saveDefaultConfig();
 
         $apiKey = $this->getConfig()->get('api-key');
         if (!is_string($apiKey)) {
