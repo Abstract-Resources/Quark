@@ -11,4 +11,16 @@ permissions:
   quark.command.group.create:
     description: Allows the player to use the /quark create command
     default: true
+  quark.command.group.suffix:
+    description: Allows the player to use the /quark create command
+    default: true
+  quark.command.group.prefix:
+    description: Allows the player to use the /quark create command
+    default: true
+  quark.command.group.display:
+    description: Allows the player to use the /quark create command
+    default: true
+  quark.command.group.priority:
+    description: Allows the player to use the /quark create command
+    default: true
 ...

@@ -100,7 +100,7 @@ final class GroupRegistry {
                         $groupData['color'] ?? null
                     );
 
-                    $this->groups[$group->getName()] = $group;
+                    $this->groups[strtolower($group->getName())] = $group;
                 }
 
                 Quark::getInstance()->getLogger()->info(TextFormat::GREEN . 'Loaded ' . count($this->groups) . ' groups in ' . round(microtime(true) - $timestamp, 2) . 'ms');
