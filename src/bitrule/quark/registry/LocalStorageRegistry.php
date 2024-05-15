@@ -36,7 +36,7 @@ final class LocalStorageRegistry {
         $logger = Quark::getInstance()->getLogger();
 
         Curl::getRequest(
-            Quark::URL . '/grants&xuid=' . $xuid,
+            Quark::URL . '/grants?xuid=' . $xuid . '&state=online',
             10,
             Quark::defaultHeaders(),
             function (?InternetRequestResult $result) use ($xuid, $logger): void {
