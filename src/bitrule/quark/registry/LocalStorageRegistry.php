@@ -115,4 +115,53 @@ final class LocalStorageRegistry {
     public function hasPendingRequest(string $xuid): bool {
         return in_array($xuid, $this->pendingRequests, true);
     }
+
+    /**
+     * @param string $xuid
+     */
+    public function unloadLocalStorage(string $xuid): void {
+        unset($this->localStorages[$xuid]);
+
+        $pendingRequestIndex = array_search($xuid, $this->pendingRequests, true);
+        if (is_int($pendingRequestIndex)) {
+            unset($this->pendingRequests[$pendingRequestIndex]);
+        }
+
+        Curl::postRequest(
+            Quark::URL . '/grants/unload',
+            [
+                'xuid' => $xuid,
+                'timestamp' => Quark::now(),
+            ],
+            10,
+            Quark::defaultHeaders(),
+            function (?InternetRequestResult $result): void {
+                if ($result === null) {
+                    throw new RuntimeException('Failed to unload grants');
+                }
+
+                $code = $result->getCode();
+                if ($code === Quark::CODE_BAD_REQUEST_GATEWAY) {
+                    $message = 'Timestamp is older than the last fetch timestamp';
+                } elseif ($code === Quark::CODE_NOT_FOUND) {
+                    $message = 'API Route not found';
+                } elseif ($code === Quark::CODE_FORBIDDEN) {
+                    $message = 'API key is not set';
+                } elseif ($code === Quark::CODE_UNAUTHORIZED) {
+                    $message = 'This server is not authorized to create groups';
+                } elseif ($code !== Quark::CODE_OK) {
+                    $message = 'Failed to unload grants (HTTP ' . $code . ')';
+                } else {
+                    $response = json_decode($result->getBody(), true);
+                    if (!is_array($response) || !isset($response['message'])) {
+                        $message = 'Invalid response';
+                    } else {
+                        $message = $response['message'];
+                    }
+                }
+
+                Quark::getInstance()->getLogger()->error($message);
+            }
+        );
+    }
 }

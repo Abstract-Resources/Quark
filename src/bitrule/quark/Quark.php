@@ -7,6 +7,7 @@ namespace bitrule\quark;
 use bitrule\quark\command\GroupCommand;
 use bitrule\quark\listener\PlayerJoinListener;
 use bitrule\quark\listener\PlayerPreLoginListener;
+use bitrule\quark\listener\PlayerQuitListener;
 use bitrule\quark\registry\GroupRegistry;
 use Exception;
 use InvalidArgumentException;
@@ -31,6 +32,7 @@ final class Quark extends PluginBase {
     public const CODE_UNAUTHORIZED = 403;
     public const CODE_NOT_FOUND = 404;
     public const CODE_INTERNAL_SERVER_ERROR = 500;
+    public const CODE_BAD_REQUEST_GATEWAY = 502;
 
     private array $defaultHeaders = [
         'Content-Type: application/json'
@@ -81,6 +83,7 @@ final class Quark extends PluginBase {
 
         $this->getServer()->getPluginManager()->registerEvents(new PlayerPreLoginListener(), $this);
         $this->getServer()->getPluginManager()->registerEvents(new PlayerJoinListener(), $this);
+        $this->getServer()->getPluginManager()->registerEvents(new PlayerQuitListener(), $this);
     }
 
     /**
@@ -95,5 +98,12 @@ final class Quark extends PluginBase {
      */
     public static function prefix(): string {
         return TextFormat::ESCAPE . 's' . TextFormat::BOLD . 'Quark' . TextFormat::RESET . TextFormat::DARK_GRAY . '> ';
+    }
+
+    /**
+     * @return string
+     */
+    public static function now(): string {
+        return date('d-m-Y H:i:s');
     }
 }
