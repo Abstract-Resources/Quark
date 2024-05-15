@@ -23,4 +23,7 @@ permissions:
   quark.command.group.priority:
     description: Allows the player to use the /quark create command
     default: true
+  quark.command.grant:
+    description: Allows the player to use the /quark create command
+    default: true
 ...

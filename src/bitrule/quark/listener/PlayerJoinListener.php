@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 namespace bitrule\quark\listener;
 
-use bitrule\quark\registry\LocalStorageRegistry;
+use bitrule\quark\Quark;
+use bitrule\quark\registry\GrantRegistry;
 use pocketmine\event\Listener;
 use pocketmine\event\player\PlayerJoinEvent;
+use pocketmine\scheduler\ClosureTask;
 use pocketmine\utils\TextFormat;
+use RuntimeException;
 
 final class PlayerJoinListener implements Listener {
 
@@ -19,18 +22,20 @@ final class PlayerJoinListener implements Listener {
     public function onPlayerJoinEvent(PlayerJoinEvent $ev): void {
         $player = $ev->getPlayer();
         if (!$player->isOnline()) {
-            throw new \RuntimeException('Player is not online');
+            throw new RuntimeException('Player is not online');
         }
 
-        $localStorage = LocalStorageRegistry::getInstance()->getLocalStorage($player->getXuid());
-        if ($localStorage === null && !LocalStorageRegistry::getInstance()->hasPendingRequest($player->getXuid())) {
-            $player->kick(TextFormat::RED . 'Failed to fetch data from the API');
-
-            return;
-        }
-
+        $localStorage = GrantRegistry::getInstance()->getLocalStorage($player->getXuid());
         if ($localStorage !== null) return;
 
-        $player->sendMessage(TextFormat::GREEN . 'Your data is being fetched from the API, please wait');
+        $player->setNoClientPredictions();
+
+        Quark::getInstance()->getScheduler()->scheduleDelayedTask(
+            new ClosureTask(function() use ($player): void {
+                $player->kick(TextFormat::RED . 'You are not authorized to join this server');
+                $player->setNoClientPredictions(false);
+            }),
+            20
+        );
     }
 }

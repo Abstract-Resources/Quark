@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace bitrule\quark\listener;
 
-use bitrule\quark\registry\LocalStorageRegistry;
+use bitrule\quark\registry\GrantRegistry;
 use pocketmine\event\Listener;
 use pocketmine\event\player\PlayerPreLoginEvent;
 use pocketmine\player\XboxLivePlayerInfo;
@@ -25,7 +25,7 @@ final class PlayerPreLoginListener implements Listener {
 
         if (!$ev->isAllowed()) return;
 
-        if (LocalStorageRegistry::getInstance()->fetchByXuid($playerInfo->getXuid())) return;
+        if (GrantRegistry::getInstance()->fetchByXuid($playerInfo->getXuid())) return;
 
         $ev->setKickFlag(PlayerPreLoginEvent::KICK_FLAG_PLUGIN, TextFormat::RED . 'Failed to fetch data from the API');
     }

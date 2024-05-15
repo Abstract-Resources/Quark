@@ -12,11 +12,13 @@ final class LocalStorage {
 
     /**
      * @param string      $xuid
+     * @param string      $state
      * @param GrantData[] $activeGrants
-     * @param GrantData[]       $expiredGrants
+     * @param GrantData[] $expiredGrants
      */
     public function __construct(
         private readonly string $xuid,
+        private readonly string $state,
         private array $activeGrants = [],
         private array $expiredGrants = []
     ) {}
@@ -29,10 +31,24 @@ final class LocalStorage {
     }
 
     /**
+     * @return string
+     */
+    public function getState(): string {
+        return $this->state;
+    }
+
+    /**
      * @return array
      */
     public function getActiveGrants(): array {
         return $this->activeGrants;
+    }
+
+    /**
+     * @param GrantData $grantData
+     */
+    public function addActiveGrant(GrantData $grantData): void {
+        $this->activeGrants[] = $grantData;
     }
 
     /**
