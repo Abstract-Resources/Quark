@@ -6,6 +6,7 @@ namespace bitrule\quark;
 
 use bitrule\quark\command\GrantCommand;
 use bitrule\quark\command\GroupCommand;
+use bitrule\quark\listener\PlayerChatListener;
 use bitrule\quark\listener\PlayerJoinListener;
 use bitrule\quark\listener\PlayerPreLoginListener;
 use bitrule\quark\listener\PlayerQuitListener;
@@ -87,9 +88,8 @@ final class Quark extends PluginBase {
 
         $this->getServer()->getPluginManager()->registerEvents(new PlayerPreLoginListener(), $this);
         $this->getServer()->getPluginManager()->registerEvents(new PlayerJoinListener(), $this);
+        $this->getServer()->getPluginManager()->registerEvents(new PlayerChatListener(), $this);
         $this->getServer()->getPluginManager()->registerEvents(new PlayerQuitListener(), $this);
-
-        echo 'Days until Christmas: ' . Quark::parseFromInput('1d5m') . PHP_EOL;
     }
 
     /**
