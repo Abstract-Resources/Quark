@@ -5,13 +5,12 @@ declare(strict_types=1);
 namespace bitrule\quark\service;
 
 use bitrule\quark\object\group\Group;
-use bitrule\quark\Pong;
 use bitrule\quark\Quark;
+use bitrule\quark\service\response\EmptyResponse;
 use bitrule\quark\service\response\GroupCreateResponse;
+use bitrule\quark\service\response\PongResponse;
 use Closure;
 use libasynCurl\Curl;
-use pocketmine\promise\Promise;
-use pocketmine\promise\PromiseResolver;
 use pocketmine\utils\InternetRequestResult;
 use pocketmine\utils\SingletonTrait;
 use pocketmine\utils\TextFormat;
@@ -90,9 +89,9 @@ final class GroupService {
     }
 
     /**
-     * @param Group    $group
-     * @param Closure(Pong): void $onCompletion
-     * @param Closure(GroupCreateResponse): void $onFail
+     * @param Group                                                       $group
+     * @param Closure(\bitrule\quark\service\response\PongResponse): void $onCompletion
+     * @param Closure(EmptyResponse): void                                $onFail
      */
     public function postCreate(Group $group, Closure $onCompletion, Closure $onFail): void {
         $data = [
@@ -115,7 +114,7 @@ final class GroupService {
             Quark::defaultHeaders(),
             function (?InternetRequestResult $result) use ($onCompletion, $onFail, $timestamp): void {
                 if ($result === null) {
-                    $onFail(new GroupCreateResponse(Quark::CODE_BAD_REQUEST_GATEWAY, 'No response'));
+                    $onFail(new EmptyResponse(Quark::CODE_BAD_REQUEST_GATEWAY, 'No response'));
 
                     return;
                 }
@@ -124,29 +123,15 @@ final class GroupService {
                 $code = $result->getCode();
 
                 if ($code !== Quark::CODE_OK) {
-                    $onFail(new GroupCreateResponse(
+                    $onFail(EmptyResponse::create(
                         $code,
-                        match ($code) {
-                            Quark::CODE_BAD_REQUEST => 'Invalid group data',
-                            Quark::CODE_NOT_FOUND => 'API Route not found',
-                            Quark::CODE_FORBIDDEN => 'API key is not set',
-                            Quark::CODE_UNAUTHORIZED => 'This server is not authorized to create groups',
-                            Quark::CODE_INTERNAL_SERVER_ERROR => 'Internal server error',
-                            Quark::CODE_BAD_REQUEST_GATEWAY => is_array($response) && isset($response['message']) ? $response['message'] : 'Failed to create group (HTTP ' . $code . ')',
-                            default => 'Failed to create group (HTTP ' . $code . ')'
-                        }
+                        is_array($response) && isset($response['message']) ? $response['message'] : null
                     ));
 
                     return;
                 }
 
-                if (!is_array($response) || !isset($response['message'])) {
-                    $onFail(new GroupCreateResponse(Quark::CODE_BAD_REQUEST, 'Invalid response'));
-
-                    return;
-                }
-
-                $onCompletion(new Pong(
+                $onCompletion(new PongResponse(
                     $code,
                     $timestamp,
                     microtime(true)

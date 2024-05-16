@@ -5,16 +5,16 @@ declare(strict_types=1);
 namespace bitrule\quark\command;
 
 use bitrule\quark\object\grant\GrantData;
-use bitrule\quark\object\LocalStorage;
+use bitrule\quark\object\GrantsInfo;
 use bitrule\quark\Quark;
-use bitrule\quark\registry\GrantRegistry;
+use bitrule\quark\service\GrantsService;
 use bitrule\quark\service\GroupService;
+use bitrule\quark\service\response\EmptyResponse;
+use bitrule\quark\service\response\PongResponse;
 use pocketmine\command\Command;
 use pocketmine\command\CommandSender;
-use pocketmine\command\utils\CommandException;
 use pocketmine\player\Player;
 use pocketmine\utils\TextFormat;
-use Ramsey\Uuid\Uuid;
 
 final class GrantCommand extends Command {
 
@@ -58,51 +58,42 @@ final class GrantCommand extends Command {
 
         $timestamp = isset($args[2]) ? Quark::parseFromInput($args[2]) : null;
 
-        GrantRegistry::getInstance()
-            ->fetchByName($args[0])
-            ->onCompletion(
-                function (LocalStorage $localStorage) use($timestamp, $scope, $sender, $group, $args): void {
-                    $originalGrantData = null;
-                    foreach ($localStorage->getActiveGrants() as $grantData) {
-                        if ($grantData->getGroupId() !== $group->getId()) continue;
-                        if ($originalGrantData !== null) {
-                            throw new CommandException('Player has multiple grants for the same group');
-                        }
+        GrantsService::getInstance()->requestGrants(
+            GrantsService::createQueryByName($args[0], false, 'active'),
+            function (GrantsInfo $grantsInfo) use ($timestamp, $scope, $sender, $group): void {
+                $activeGrantData = $grantsInfo->getActiveGrantByGroup($group->getId());
+                if ($scope !== null && $activeGrantData !== null && $activeGrantData->hasScope($scope)) {
+                    $sender->sendMessage(TextFormat::RED . $grantsInfo->getKnownName() . ' already has this group!');
 
-                        if ($scope === null || $grantData->hasScope($scope)) {
-                            $sender->sendMessage(TextFormat::RED . $args[0] . ' already has this group!');
+                    return;
+                }
 
-                            return;
-                        }
-
-                        $grantData->addScope($scope);
-                        $originalGrantData = $grantData;
-                    }
-
-                    if ($originalGrantData === null) {
-                        $originalGrantData = new GrantData(
-                            Uuid::uuid4()->toString(),
-                            $group->getId(),
-                            Quark::now(),
-                            $timestamp,
-                            null,
-                            $sender instanceof Player ? $sender->getXuid() : '000',
-                            null,
-                            $scope !== null ? [$scope] : []
-                        );
-
-                        $localStorage->addActiveGrant($originalGrantData);
-                    }
-
-                    $sender->sendMessage(TextFormat::GREEN . 'Successfully granted ' . $args[0] . ' the ' . $group->getName() . ' group');
-
-                    GrantRegistry::getInstance()->postGrant(
-                        $localStorage->getXuid(),
-                        $localStorage->getState(),
-                        $originalGrantData
+                if ($activeGrantData === null) {
+                    $activeGrantData = GrantData::empty(
+                        $timestamp,
+                        $group->getId(),
+                        $sender instanceof Player ? $sender->getXuid() : '000'
                     );
-                },
-                fn() => $sender->sendMessage(TextFormat::RED . 'Player not found')
-            );
+                }
+
+                if ($scope !== null) $activeGrantData->addScope($scope);
+
+                $grantsInfo->addActiveGrant($activeGrantData);
+
+                GrantsService::getInstance()->postGrant(
+                    $grantsInfo,
+                    $activeGrantData,
+                    function (PongResponse $pong) use ($sender, $grantsInfo, $group): void {
+                        $sender->sendMessage(TextFormat::GREEN . 'Granted ' . $grantsInfo->getKnownName() . ' the group ' . $group->getName());
+                    },
+                    function (EmptyResponse $response) use ($sender): void {
+                        $sender->sendMessage(TextFormat::RED . $response->getMessage());
+                    }
+                );
+            },
+            function (EmptyResponse $response) use ($sender): void {
+                $sender->sendMessage(TextFormat::RED . $response->getMessage());
+            }
+        );
     }
 }

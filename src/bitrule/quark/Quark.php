@@ -8,8 +8,10 @@ use bitrule\quark\command\GrantCommand;
 use bitrule\quark\command\GroupCommand;
 use bitrule\quark\listener\PlayerChatListener;
 use bitrule\quark\listener\PlayerJoinListener;
+use bitrule\quark\listener\PlayerLoginListener;
 use bitrule\quark\listener\PlayerPreLoginListener;
 use bitrule\quark\listener\PlayerQuitListener;
+use bitrule\quark\service\GrantsService;
 use bitrule\quark\service\GroupService;
 use DateInterval;
 use DateTime;
@@ -80,6 +82,7 @@ final class Quark extends PluginBase {
         $this->defaultHeaders[] = 'X-API-KEY: ' . $apiKey;
 
         GroupService::getInstance()->loadAll();
+        GrantsService::getInstance()->init();
 
         $this->getServer()->getCommandMap()->registerAll('quart', [
             new GroupCommand('group', 'Manage our network groups'),
@@ -87,6 +90,7 @@ final class Quark extends PluginBase {
         ]);
 
         $this->getServer()->getPluginManager()->registerEvents(new PlayerPreLoginListener(), $this);
+        $this->getServer()->getPluginManager()->registerEvents(new PlayerLoginListener(), $this);
         $this->getServer()->getPluginManager()->registerEvents(new PlayerJoinListener(), $this);
         $this->getServer()->getPluginManager()->registerEvents(new PlayerChatListener(), $this);
         $this->getServer()->getPluginManager()->registerEvents(new PlayerQuitListener(), $this);

@@ -5,10 +5,11 @@ declare(strict_types=1);
 namespace bitrule\quark\command\group;
 
 use abstractplugin\command\Argument;
-use bitrule\quark\Pong;
 use bitrule\quark\Quark;
 use bitrule\quark\service\GroupService;
+use bitrule\quark\service\response\EmptyResponse;
 use bitrule\quark\service\response\GroupCreateResponse;
+use bitrule\quark\service\response\PongResponse;
 use pocketmine\command\CommandSender;
 use pocketmine\utils\TextFormat;
 
@@ -45,7 +46,7 @@ final class GroupPriorityArgument extends Argument {
 
         GroupService::getInstance()->postCreate(
             $group,
-            function (Pong $pong) use ($priority, $group, $sender): void {
+            function (PongResponse $pong) use ($priority, $group, $sender): void {
                 $sender->sendMessage(sprintf(
                     Quark::prefix() . TextFormat::colorize('&aThe priority of the group %s has been set to \'&b%s&a\' in %.2fms'),
                     $group->getName(),
@@ -53,7 +54,7 @@ final class GroupPriorityArgument extends Argument {
                     round($pong->getResponseTimestamp() - $pong->getInitialTimestamp(), 2)
                 ));
             },
-            function (GroupCreateResponse $response) use ($sender): void {
+            function (EmptyResponse $response) use ($sender): void {
                 $sender->sendMessage(Quark::prefix() . $response->getMessage());
 
                 Quark::getInstance()->getLogger()->error('[Status Code: ' . $response->getStatusCode() . '] => ' . $response->getMessage());

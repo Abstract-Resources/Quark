@@ -12,9 +12,9 @@ use pocketmine\utils\TextFormat;
 final class QuarkChatFormatter implements ChatFormatter {
 
     /**
-     * @param LocalStorage $localStorage
+     * @param GrantsInfo $grantsInfo
      */
-    public function __construct(private readonly LocalStorage $localStorage) {}
+    public function __construct(private readonly GrantsInfo $grantsInfo) {}
 
     /**
      * Returns the formatted message to broadcast.
@@ -22,7 +22,7 @@ final class QuarkChatFormatter implements ChatFormatter {
      * each recipient's language).
      */
     public function format(string $username, string $message): Translatable|string {
-        $highestGroup = $this->localStorage->getHighestGroup();
+        $highestGroup = $this->grantsInfo->getHighestGroup();
         if ($highestGroup === null) {
             $highestGroup = GroupService::getInstance()->getGroupByName('default');
         }

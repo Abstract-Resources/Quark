@@ -8,16 +8,11 @@ use bitrule\quark\object\grant\GrantData;
 use bitrule\quark\object\group\Group;
 use bitrule\quark\service\GroupService;
 
-final class LocalStorage {
+final class GrantsInfo {
 
-    /**
-     * @param string      $xuid
-     * @param string      $state
-     * @param GrantData[] $activeGrants
-     * @param GrantData[] $expiredGrants
-     */
     public function __construct(
         private readonly string $xuid,
+        private readonly string $knownName,
         private readonly string $state,
         private array $activeGrants = [],
         private array $expiredGrants = []
@@ -33,6 +28,13 @@ final class LocalStorage {
     /**
      * @return string
      */
+    public function getKnownName(): string {
+        return $this->knownName;
+    }
+
+    /**
+     * @return string
+     */
     public function getState(): string {
         return $this->state;
     }
@@ -42,6 +44,21 @@ final class LocalStorage {
      */
     public function getActiveGrants(): array {
         return $this->activeGrants;
+    }
+
+    /**
+     * @param string $groupId
+     *
+     * @return GrantData|null
+     */
+    public function getActiveGrantByGroup(string $groupId): ?GrantData {
+        foreach ($this->activeGrants as $grant) {
+            if ($grant->getGroupId() !== $groupId) continue;
+
+            return $grant;
+        }
+
+        return null;
     }
 
     /**
@@ -112,6 +129,5 @@ final class LocalStorage {
         if ($highestGrant === null) return null;
 
         return GroupService::getInstance()->getGroupById($highestGrant->getGroupId());
-
     }
 }

@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace bitrule\quark;
+namespace bitrule\quark\service\response;
 
-final class Pong {
+final class PongResponse {
 
     /**
      * @param int   $statusCode

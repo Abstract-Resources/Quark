@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace bitrule\quark\listener;
 
-use bitrule\quark\registry\GrantRegistry;
+use bitrule\quark\object\GrantsInfo;
+use bitrule\quark\service\GrantsService;
+use bitrule\quark\service\response\EmptyResponse;
 use pocketmine\event\Listener;
 use pocketmine\event\player\PlayerPreLoginEvent;
 use pocketmine\player\XboxLivePlayerInfo;
@@ -25,8 +27,18 @@ final class PlayerPreLoginListener implements Listener {
 
         if (!$ev->isAllowed()) return;
 
-        if (GrantRegistry::getInstance()->fetchByXuid($playerInfo->getXuid())) return;
+        $xuid = $playerInfo->getXuid();
 
-        $ev->setKickFlag(PlayerPreLoginEvent::KICK_FLAG_PLUGIN, TextFormat::RED . 'Failed to fetch data from the API');
+        GrantsService::getInstance()->requestGrants(
+            GrantsService::createQueryByXuid($xuid, true, 'active'),
+            function (GrantsInfo $grantsInfo): void {
+                GrantsService::getInstance()->cache($grantsInfo);
+            },
+            function (EmptyResponse $emptyResponse) use ($xuid): void {
+                if ($emptyResponse->getMessage() === GrantsService::PLAYER_NOT_FOUND_RESPONSE) return;
+
+                GrantsService::getInstance()->getFailedRequests()->add($xuid);
+            }
+        );
     }
 }

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace bitrule\quark\listener;
 
 use bitrule\quark\Quark;
-use bitrule\quark\registry\GrantRegistry;
+use bitrule\quark\service\GrantsService;
 use pocketmine\event\Listener;
 use pocketmine\event\player\PlayerJoinEvent;
 use pocketmine\scheduler\ClosureTask;
@@ -25,8 +25,7 @@ final class PlayerJoinListener implements Listener {
             throw new RuntimeException('Player is not online');
         }
 
-        $localStorage = GrantRegistry::getInstance()->getLocalStorage($player->getXuid());
-        if ($localStorage !== null) return;
+        if (GrantsService::getInstance()->getGrantsInfo($player->getXuid()) !== null) return;
 
         $player->setNoClientPredictions();
 

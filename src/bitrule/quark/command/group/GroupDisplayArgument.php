@@ -5,10 +5,11 @@ declare(strict_types=1);
 namespace bitrule\quark\command\group;
 
 use abstractplugin\command\Argument;
-use bitrule\quark\Pong;
 use bitrule\quark\Quark;
 use bitrule\quark\service\GroupService;
+use bitrule\quark\service\response\EmptyResponse;
 use bitrule\quark\service\response\GroupCreateResponse;
+use bitrule\quark\service\response\PongResponse;
 use pocketmine\command\CommandSender;
 use pocketmine\utils\TextFormat;
 
@@ -45,10 +46,10 @@ final class GroupDisplayArgument extends Argument {
 
         GroupService::getInstance()->postCreate(
             $group,
-            function (Pong $pong) use ($group, $sender): void {
+            function (PongResponse $pong) use ($group, $sender): void {
                 $sender->sendMessage(Quark::prefix() . TextFormat::GREEN . 'The display name of the group ' . $group->getName() . ' has been set in ' . round($pong->getResponseTimestamp() - $pong->getInitialTimestamp(), 2) . 'ms');
             },
-            function (GroupCreateResponse $response) use ($sender): void {
+            function (EmptyResponse $response) use ($sender): void {
                 $sender->sendMessage(Quark::prefix() . $response->getMessage());
 
                 Quark::getInstance()->getLogger()->error('[Status Code: ' . $response->getStatusCode() . '] => ' . $response->getMessage());

@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace bitrule\quark\object\grant;
 
+use bitrule\quark\Quark;
+use Ramsey\Uuid\Uuid;
+
 final class GrantData {
 
     /**
@@ -127,6 +130,26 @@ final class GrantData {
 
     private static function refactor(string $scope): array {
         return explode(',', str_replace(['g=', 's=', ' '], '', $scope));
+    }
+
+    /**
+     * @param string|null $expiresAt
+     * @param string      $groupId
+     * @param string      $whoGranted
+     *
+     * @return GrantData
+     */
+    public static function empty(?string $expiresAt, string $groupId, string $whoGranted): GrantData {
+        return new self (
+            Uuid::uuid4()->toString(),
+            $groupId,
+            Quark::now(),
+            $expiresAt,
+            null,
+            $whoGranted,
+            null,
+            []
+        );
     }
 
     /**
