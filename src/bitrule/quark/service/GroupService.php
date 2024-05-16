@@ -2,11 +2,13 @@
 
 declare(strict_types=1);
 
-namespace bitrule\quark\registry;
+namespace bitrule\quark\service;
 
 use bitrule\quark\object\group\Group;
 use bitrule\quark\Pong;
 use bitrule\quark\Quark;
+use bitrule\quark\service\response\GroupCreateResponse;
+use Closure;
 use libasynCurl\Curl;
 use pocketmine\promise\Promise;
 use pocketmine\promise\PromiseResolver;
@@ -15,7 +17,7 @@ use pocketmine\utils\SingletonTrait;
 use pocketmine\utils\TextFormat;
 use RuntimeException;
 
-final class GroupRegistry {
+final class GroupService {
     use SingletonTrait {
         setInstance as private;
         reset as private;
@@ -88,11 +90,11 @@ final class GroupRegistry {
     }
 
     /**
-     * @param Group $group
-     *
-     * @return Promise<Pong>
+     * @param Group    $group
+     * @param Closure(Pong): void $onCompletion
+     * @param Closure(GroupCreateResponse): void $onFail
      */
-    public function postCreate(Group $group): Promise {
+    public function postCreate(Group $group, Closure $onCompletion, Closure $onFail): void {
         $data = [
             'id' => $group->getId(),
             'name' => $group->getName(),
@@ -106,44 +108,51 @@ final class GroupRegistry {
 
         $timestamp = microtime(true);
 
-        $logger = Quark::getInstance()->getLogger();
-        $promiseResolver = new PromiseResolver();
-
         Curl::postRequest(
             Quark::URL . '/groups/create',
             $data,
             10,
             Quark::defaultHeaders(),
-            function (?InternetRequestResult $result) use ($timestamp, $logger, $promiseResolver): void {
-                $code = $result !== null ? $result->getCode() : Quark::CODE_NOT_FOUND;
-                $message = '';
-                if ($code === Quark::CODE_NOT_FOUND) {
-                    $logger->error('Failed to create group');
-                } elseif ($code === Quark::CODE_FORBIDDEN) {
-                    $logger->error('API key is not set');
-                } elseif ($code === Quark::CODE_UNAUTHORIZED) {
-                    $logger->error('This server is not authorized to create groups');
-                } elseif ($code !== Quark::CODE_OK) {
-                    $logger->error('Failed to create group');
-                } else {
-                    $response = $result !== null ? json_decode($result->getBody(), true) : null;
-                    if (!is_array($response) || !isset($response['message'])) {
-                        $code = Quark::CODE_BAD_REQUEST;
-                    } else {
-                        $message = $response['message'];
-                    }
+            function (?InternetRequestResult $result) use ($onCompletion, $onFail, $timestamp): void {
+                if ($result === null) {
+                    $onFail(new GroupCreateResponse(Quark::CODE_BAD_REQUEST_GATEWAY, 'No response'));
+
+                    return;
                 }
 
-                $promiseResolver->resolve(new Pong(
+                $response = json_decode($result->getBody(), true);
+                $code = $result->getCode();
+
+                if ($code !== Quark::CODE_OK) {
+                    $onFail(new GroupCreateResponse(
+                        $code,
+                        match ($code) {
+                            Quark::CODE_BAD_REQUEST => 'Invalid group data',
+                            Quark::CODE_NOT_FOUND => 'API Route not found',
+                            Quark::CODE_FORBIDDEN => 'API key is not set',
+                            Quark::CODE_UNAUTHORIZED => 'This server is not authorized to create groups',
+                            Quark::CODE_INTERNAL_SERVER_ERROR => 'Internal server error',
+                            Quark::CODE_BAD_REQUEST_GATEWAY => is_array($response) && isset($response['message']) ? $response['message'] : 'Failed to create group (HTTP ' . $code . ')',
+                            default => 'Failed to create group (HTTP ' . $code . ')'
+                        }
+                    ));
+
+                    return;
+                }
+
+                if (!is_array($response) || !isset($response['message'])) {
+                    $onFail(new GroupCreateResponse(Quark::CODE_BAD_REQUEST, 'Invalid response'));
+
+                    return;
+                }
+
+                $onCompletion(new Pong(
                     $code,
                     $timestamp,
-                    microtime(true),
-                        $message
+                    microtime(true)
                 ));
             }
         );
-
-        return $promiseResolver->getPromise();
     }
 
     /**

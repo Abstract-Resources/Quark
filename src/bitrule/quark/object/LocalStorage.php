@@ -6,7 +6,7 @@ namespace bitrule\quark\object;
 
 use bitrule\quark\object\grant\GrantData;
 use bitrule\quark\object\group\Group;
-use bitrule\quark\registry\GroupRegistry;
+use bitrule\quark\service\GroupService;
 
 final class LocalStorage {
 
@@ -84,10 +84,10 @@ final class LocalStorage {
                 continue;
             }
 
-            $highestGroup = GroupRegistry::getInstance()->getGroupById($highestGrant->getGroupId());
+            $highestGroup = GroupService::getInstance()->getGroupById($highestGrant->getGroupId());
             if ($highestGroup === null) continue;
 
-            $group = GroupRegistry::getInstance()->getGroupById($grant->getGroupId());
+            $group = GroupService::getInstance()->getGroupById($grant->getGroupId());
             if ($group === null) {
                 unset($this->activeGrants[$index]);
 
@@ -111,7 +111,7 @@ final class LocalStorage {
         $highestGrant = $this->getHighestGrant();
         if ($highestGrant === null) return null;
 
-        return GroupRegistry::getInstance()->getGroupById($highestGrant->getGroupId());
+        return GroupService::getInstance()->getGroupById($highestGrant->getGroupId());
 
     }
 }

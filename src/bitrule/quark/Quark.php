@@ -10,7 +10,7 @@ use bitrule\quark\listener\PlayerChatListener;
 use bitrule\quark\listener\PlayerJoinListener;
 use bitrule\quark\listener\PlayerPreLoginListener;
 use bitrule\quark\listener\PlayerQuitListener;
-use bitrule\quark\registry\GroupRegistry;
+use bitrule\quark\service\GroupService;
 use DateInterval;
 use DateTime;
 use Exception;
@@ -79,7 +79,7 @@ final class Quark extends PluginBase {
 
         $this->defaultHeaders[] = 'X-API-KEY: ' . $apiKey;
 
-        GroupRegistry::getInstance()->loadAll();
+        GroupService::getInstance()->loadAll();
 
         $this->getServer()->getCommandMap()->registerAll('quart', [
             new GroupCommand('group', 'Manage our network groups'),

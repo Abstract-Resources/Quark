@@ -7,7 +7,8 @@ namespace bitrule\quark\command\group;
 use abstractplugin\command\Argument;
 use bitrule\quark\Pong;
 use bitrule\quark\Quark;
-use bitrule\quark\registry\GroupRegistry;
+use bitrule\quark\service\GroupService;
+use bitrule\quark\service\response\GroupCreateResponse;
 use pocketmine\command\CommandSender;
 use pocketmine\utils\TextFormat;
 
@@ -33,7 +34,7 @@ final class GroupPriorityArgument extends Argument {
             return;
         }
 
-        $group = GroupRegistry::getInstance()->getGroupByName($groupName);
+        $group = GroupService::getInstance()->getGroupByName($groupName);
         if ($group === null) {
             $sender->sendMessage(TextFormat::RED . 'Group ' . $groupName . ' does not exist');
 
@@ -42,13 +43,21 @@ final class GroupPriorityArgument extends Argument {
 
         $group->setPriority((int) $priority);
 
-        GroupRegistry::getInstance()
-            ->postCreate($group)
-            ->onCompletion(
-                function (Pong $pong) use ($sender, $groupName, $priority): void {
-                    $sender->sendMessage(Quark::prefix() . TextFormat::GREEN . 'Group ' . $groupName . ' priority set to ' . $priority . ' in ' . round($pong->getResponseTimestamp() - $pong->getInitialTimestamp(), 2) . 'ms');
-                },
-                fn() => $sender->sendMessage(TextFormat::RED . 'Failed to set group ' . $groupName . ' priority')
-            );
+        GroupService::getInstance()->postCreate(
+            $group,
+            function (Pong $pong) use ($priority, $group, $sender): void {
+                $sender->sendMessage(sprintf(
+                    Quark::prefix() . TextFormat::colorize('&aThe priority of the group %s has been set to \'&b%s&a\' in %.2fms'),
+                    $group->getName(),
+                    $priority,
+                    round($pong->getResponseTimestamp() - $pong->getInitialTimestamp(), 2)
+                ));
+            },
+            function (GroupCreateResponse $response) use ($sender): void {
+                $sender->sendMessage(Quark::prefix() . $response->getMessage());
+
+                Quark::getInstance()->getLogger()->error('[Status Code: ' . $response->getStatusCode() . '] => ' . $response->getMessage());
+            }
+        );
     }
 }

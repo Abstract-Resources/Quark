@@ -7,13 +7,12 @@ namespace bitrule\quark\command;
 use bitrule\quark\object\grant\GrantData;
 use bitrule\quark\object\LocalStorage;
 use bitrule\quark\Quark;
-use bitrule\quark\registry\GroupRegistry;
 use bitrule\quark\registry\GrantRegistry;
+use bitrule\quark\service\GroupService;
 use pocketmine\command\Command;
 use pocketmine\command\CommandSender;
 use pocketmine\command\utils\CommandException;
 use pocketmine\player\Player;
-use pocketmine\Server;
 use pocketmine\utils\TextFormat;
 use Ramsey\Uuid\Uuid;
 
@@ -38,7 +37,7 @@ final class GrantCommand extends Command {
             return;
         }
 
-        $group = GroupRegistry::getInstance()->getGroupByName($args[1]);
+        $group = GroupService::getInstance()->getGroupByName($args[1]);
         if ($group === null) {
             $sender->sendMessage(TextFormat::RED . 'Group not found');
 

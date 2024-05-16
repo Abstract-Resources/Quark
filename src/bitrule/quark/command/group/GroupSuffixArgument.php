@@ -7,7 +7,8 @@ namespace bitrule\quark\command\group;
 use abstractplugin\command\Argument;
 use bitrule\quark\Pong;
 use bitrule\quark\Quark;
-use bitrule\quark\registry\GroupRegistry;
+use bitrule\quark\service\GroupService;
+use bitrule\quark\service\response\GroupCreateResponse;
 use pocketmine\command\CommandSender;
 use pocketmine\utils\TextFormat;
 
@@ -33,7 +34,7 @@ final class GroupSuffixArgument extends Argument {
             return;
         }
 
-        $group = GroupRegistry::getInstance()->getGroupByName($groupName);
+        $group = GroupService::getInstance()->getGroupByName($groupName);
         if ($group === null) {
             $sender->sendMessage(TextFormat::RED . 'Group ' . $groupName . ' does not exist');
 
@@ -41,14 +42,22 @@ final class GroupSuffixArgument extends Argument {
         }
 
         $group->setSuffix($suffix);
-        
-        GroupRegistry::getInstance()
-            ->postCreate($group)
-            ->onCompletion(
-                function (Pong $pong) use ($sender, $groupName, $suffix): void {
-                    $sender->sendMessage(Quark::prefix() . TextFormat::GREEN . 'Group ' . $groupName . ' suffix set to ' . $suffix . ' in ' . round($pong->getResponseTimestamp() - $pong->getInitialTimestamp(), 2) . 'ms');
-                },
-                fn() => $sender->sendMessage(TextFormat::RED . 'Failed to set group ' . $groupName . ' suffix')
-            );
+
+        GroupService::getInstance()->postCreate(
+            $group,
+            function (Pong $pong) use ($suffix, $group, $sender): void {
+                $sender->sendMessage(sprintf(
+                    Quark::prefix() . TextFormat::colorize('&aThe suffix of the group %s has been set to \'&b%s&a\' in %.2fms'),
+                    $group->getName(),
+                    $suffix,
+                    round($pong->getResponseTimestamp() - $pong->getInitialTimestamp(), 2)
+                ));
+            },
+            function (GroupCreateResponse $response) use ($sender): void {
+                $sender->sendMessage(Quark::prefix() . $response->getMessage());
+
+                Quark::getInstance()->getLogger()->error('[Status Code: ' . $response->getStatusCode() . '] => ' . $response->getMessage());
+            }
+        );
     }
 }

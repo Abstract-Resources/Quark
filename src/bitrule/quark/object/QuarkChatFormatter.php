@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace bitrule\quark\object;
 
-use bitrule\quark\registry\GroupRegistry;
+use bitrule\quark\service\GroupService;
 use pocketmine\lang\Translatable;
 use pocketmine\player\chat\ChatFormatter;
 use pocketmine\utils\TextFormat;
@@ -24,7 +24,7 @@ final class QuarkChatFormatter implements ChatFormatter {
     public function format(string $username, string $message): Translatable|string {
         $highestGroup = $this->localStorage->getHighestGroup();
         if ($highestGroup === null) {
-            $highestGroup = GroupRegistry::getInstance()->getGroupByName('default');
+            $highestGroup = GroupService::getInstance()->getGroupByName('default');
         }
 
         $prefix = $highestGroup !== null && $highestGroup->getPrefix() !== null ? $highestGroup->getPrefix() : TextFormat::GRAY;

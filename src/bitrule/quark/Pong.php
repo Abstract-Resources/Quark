@@ -7,16 +7,14 @@ namespace bitrule\quark;
 final class Pong {
 
     /**
-     * @param int    $statusCode
-     * @param float  $initialTimestamp
-     * @param float  $responseTimestamp
-     * @param string $message
+     * @param int   $statusCode
+     * @param float $initialTimestamp
+     * @param float $responseTimestamp
      */
     public function __construct(
         private readonly int $statusCode,
         private readonly float $initialTimestamp,
-        private readonly float $responseTimestamp,
-        private readonly string $message
+        private readonly float $responseTimestamp
     ) {}
 
     /**
@@ -40,12 +38,5 @@ final class Pong {
      */
     public function getResponseTimestamp(): float {
         return $this->responseTimestamp;
-    }
-
-    /**
-     * @return string
-     */
-    public function getMessage(): string {
-        return $this->message;
     }
 }

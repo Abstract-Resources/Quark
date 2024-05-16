@@ -7,7 +7,8 @@ namespace bitrule\quark\command\group;
 use abstractplugin\command\Argument;
 use bitrule\quark\Pong;
 use bitrule\quark\Quark;
-use bitrule\quark\registry\GroupRegistry;
+use bitrule\quark\service\GroupService;
+use bitrule\quark\service\response\GroupCreateResponse;
 use pocketmine\command\CommandSender;
 use pocketmine\utils\TextFormat;
 
@@ -33,7 +34,7 @@ final class GroupDisplayArgument extends Argument {
             return;
         }
 
-        $group = GroupRegistry::getInstance()->getGroupByName($groupName);
+        $group = GroupService::getInstance()->getGroupByName($groupName);
         if ($group === null) {
             $sender->sendMessage(TextFormat::RED . 'Group ' . $groupName . ' does not exist');
 
@@ -42,13 +43,16 @@ final class GroupDisplayArgument extends Argument {
 
         $group->setDisplayName($display);
 
-        GroupRegistry::getInstance()
-            ->postCreate($group)
-            ->onCompletion(
-                function (Pong $pong) use ($sender, $groupName, $display): void {
-                    $sender->sendMessage(Quark::prefix() . TextFormat::GREEN . 'Group ' . $groupName . ' display set to ' . $display . ' in ' . round($pong->getResponseTimestamp() - $pong->getInitialTimestamp(), 2) . 'ms');
-                },
-                fn() => $sender->sendMessage(TextFormat::RED . 'Failed to set group ' . $groupName . ' display')
-            );
+        GroupService::getInstance()->postCreate(
+            $group,
+            function (Pong $pong) use ($group, $sender): void {
+                $sender->sendMessage(Quark::prefix() . TextFormat::GREEN . 'The display name of the group ' . $group->getName() . ' has been set in ' . round($pong->getResponseTimestamp() - $pong->getInitialTimestamp(), 2) . 'ms');
+            },
+            function (GroupCreateResponse $response) use ($sender): void {
+                $sender->sendMessage(Quark::prefix() . $response->getMessage());
+
+                Quark::getInstance()->getLogger()->error('[Status Code: ' . $response->getStatusCode() . '] => ' . $response->getMessage());
+            }
+        );
     }
 }
