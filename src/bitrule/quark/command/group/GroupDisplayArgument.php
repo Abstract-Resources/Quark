@@ -8,10 +8,12 @@ use abstractplugin\command\Argument;
 use bitrule\quark\Quark;
 use bitrule\quark\service\GroupService;
 use bitrule\quark\service\response\EmptyResponse;
-use bitrule\quark\service\response\GroupCreateResponse;
 use bitrule\quark\service\response\PongResponse;
 use pocketmine\command\CommandSender;
 use pocketmine\utils\TextFormat;
+use function array_shift;
+use function is_string;
+use function round;
 
 final class GroupDisplayArgument extends Argument {
 

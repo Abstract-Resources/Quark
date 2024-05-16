@@ -21,6 +21,11 @@ use libasynCurl\Curl;
 use pocketmine\plugin\PluginBase;
 use pocketmine\utils\SingletonTrait;
 use pocketmine\utils\TextFormat;
+use function date;
+use function is_file;
+use function is_numeric;
+use function is_string;
+use function str_split;
 
 final class Quark extends PluginBase {
     use SingletonTrait {
@@ -29,7 +34,7 @@ final class Quark extends PluginBase {
     }
 
     // API URL
-    public const URL = 'http://127.0.0.1:3000/api';
+    public const URL = 'http://play.hyrium.com:3000/api';
 
     // HTTP status codes
     public const CODE_OK = 200;
@@ -41,7 +46,7 @@ final class Quark extends PluginBase {
     public const CODE_BAD_REQUEST_GATEWAY = 502;
 
     private array $defaultHeaders = [
-        'Content-Type: application/json'
+    	'Content-Type: application/json'
     ];
 
     protected function onLoad(): void {
@@ -79,14 +84,16 @@ final class Quark extends PluginBase {
             throw new InvalidArgumentException('Invalid API key');
         }
 
+        echo 'API Key: ' . $apiKey . PHP_EOL;
+
         $this->defaultHeaders[] = 'X-API-KEY: ' . $apiKey;
 
         GroupService::getInstance()->loadAll();
         GrantsService::getInstance()->init();
 
         $this->getServer()->getCommandMap()->registerAll('quart', [
-            new GroupCommand('group', 'Manage our network groups'),
-            new GrantCommand()
+        	new GroupCommand('group', 'Manage our network groups'),
+        	new GrantCommand()
         ]);
 
         $this->getServer()->getPluginManager()->registerEvents(new PlayerPreLoginListener(), $this);

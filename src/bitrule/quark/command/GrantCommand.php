@@ -15,6 +15,8 @@ use pocketmine\command\Command;
 use pocketmine\command\CommandSender;
 use pocketmine\player\Player;
 use pocketmine\utils\TextFormat;
+use function count;
+use function str_starts_with;
 
 final class GrantCommand extends Command {
 

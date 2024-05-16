@@ -7,7 +7,6 @@ namespace bitrule\quark\service;
 use bitrule\quark\object\group\Group;
 use bitrule\quark\Quark;
 use bitrule\quark\service\response\EmptyResponse;
-use bitrule\quark\service\response\GroupCreateResponse;
 use bitrule\quark\service\response\PongResponse;
 use Closure;
 use libasynCurl\Curl;
@@ -15,6 +14,12 @@ use pocketmine\utils\InternetRequestResult;
 use pocketmine\utils\SingletonTrait;
 use pocketmine\utils\TextFormat;
 use RuntimeException;
+use function count;
+use function is_array;
+use function json_decode;
+use function microtime;
+use function round;
+use function strtolower;
 
 final class GroupService {
     use SingletonTrait {
@@ -95,9 +100,9 @@ final class GroupService {
      */
     public function postCreate(Group $group, Closure $onCompletion, Closure $onFail): void {
         $data = [
-            'id' => $group->getId(),
-            'name' => $group->getName(),
-            'priority' => $group->getPriority()
+        	'id' => $group->getId(),
+        	'name' => $group->getName(),
+        	'priority' => $group->getPriority()
         ];
 
         if ($group->getDisplayName() !== null) $data['display'] = $group->getDisplayName();

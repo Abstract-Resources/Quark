@@ -6,7 +6,6 @@ namespace bitrule\quark\service;
 
 use bitrule\quark\object\grant\GrantData;
 use bitrule\quark\object\GrantsInfo;
-use bitrule\quark\object\LocalStorage;
 use bitrule\quark\Quark;
 use bitrule\quark\service\response\EmptyResponse;
 use bitrule\quark\service\response\PongResponse;
@@ -17,6 +16,10 @@ use pocketmine\utils\ObjectSet;
 use pocketmine\utils\SingletonTrait;
 use pocketmine\utils\TextFormat;
 use RuntimeException;
+use function array_map;
+use function is_array;
+use function json_decode;
+use function microtime;
 
 final class GrantsService {
     use SingletonTrait {
@@ -132,12 +135,12 @@ final class GrantsService {
      */
     public function postGrant(GrantsInfo $grantsInfo, GrantData $grantData, Closure $onCompletion, Closure $onFail): void {
         $data = [
-            '_id' => $grantData->getId(),
-            'group_id' => $grantData->getGroupId(),
-            'source_xuid' => $grantsInfo->getXuid(),
-            'created_at' => $grantData->getCreatedAt(),
-            'who_granted' => $grantData->getWhoGranted(),
-            'scopes' => $grantData->getScopes(),
+        	'_id' => $grantData->getId(),
+        	'group_id' => $grantData->getGroupId(),
+        	'source_xuid' => $grantsInfo->getXuid(),
+        	'created_at' => $grantData->getCreatedAt(),
+        	'who_granted' => $grantData->getWhoGranted(),
+        	'scopes' => $grantData->getScopes(),
         ];
 
         if ($grantData->getExpiresAt() !== null) $data['expires_at'] = $grantData->getExpiresAt();
@@ -195,8 +198,8 @@ final class GrantsService {
         Curl::postRequest(
             Quark::URL . '/grants/unload',
             [
-                'xuid' => $xuid,
-                'timestamp' => Quark::now(),
+            	'xuid' => $xuid,
+            	'timestamp' => Quark::now(),
             ],
             10,
             Quark::defaultHeaders(),

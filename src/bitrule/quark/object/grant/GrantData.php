@@ -6,6 +6,10 @@ namespace bitrule\quark\object\grant;
 
 use bitrule\quark\Quark;
 use Ramsey\Uuid\Uuid;
+use function count;
+use function explode;
+use function in_array;
+use function str_replace;
 
 final class GrantData {
 

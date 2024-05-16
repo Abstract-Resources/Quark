@@ -10,7 +10,6 @@ use bitrule\quark\service\response\EmptyResponse;
 use pocketmine\event\Listener;
 use pocketmine\event\player\PlayerPreLoginEvent;
 use pocketmine\player\XboxLivePlayerInfo;
-use pocketmine\utils\TextFormat;
 
 final class PlayerPreLoginListener implements Listener {
 
