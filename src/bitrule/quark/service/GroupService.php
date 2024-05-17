@@ -6,8 +6,9 @@ namespace bitrule\quark\service;
 
 use bitrule\quark\object\group\Group;
 use bitrule\quark\Quark;
-use bitrule\quark\service\response\EmptyResponse;
-use bitrule\quark\service\response\PongResponse;
+use bitrule\services\response\EmptyResponse;
+use bitrule\services\response\PongResponse;
+use bitrule\services\Service;
 use Closure;
 use libasynCurl\Curl;
 use pocketmine\utils\InternetRequestResult;
@@ -37,27 +38,27 @@ final class GroupService {
         $timestamp = microtime(true);
 
         Curl::getRequest(
-            Quark::URL . '/groups',
+            Service::URL . '/groups',
             10,
-            Quark::defaultHeaders(),
+            Service::defaultHeaders(),
             function (?InternetRequestResult $result) use ($timestamp): void {
                 if ($result === null) {
                     throw new RuntimeException('Failed to fetch groups');
                 }
 
-                if ($result->getCode() === Quark::CODE_NOT_FOUND) {
+                if ($result->getCode() === Service::CODE_NOT_FOUND) {
                     throw new RuntimeException('API Route not found');
                 }
 
-                if ($result->getCode() === Quark::CODE_FORBIDDEN) {
+                if ($result->getCode() === Service::CODE_FORBIDDEN) {
                     throw new RuntimeException('API key is not set');
                 }
 
-                if ($result->getCode() === Quark::CODE_UNAUTHORIZED) {
+                if ($result->getCode() === Service::CODE_UNAUTHORIZED) {
                     throw new RuntimeException('This server is not authorized to fetch groups');
                 }
 
-                if ($result->getCode() !== Quark::CODE_OK) {
+                if ($result->getCode() !== Service::CODE_OK) {
                     throw new RuntimeException('Failed to fetch groups (HTTP ' . $result->getCode() . ')');
                 }
 
@@ -94,9 +95,9 @@ final class GroupService {
     }
 
     /**
-     * @param Group                                                       $group
-     * @param Closure(\bitrule\quark\service\response\PongResponse): void $onCompletion
-     * @param Closure(EmptyResponse): void                                $onFail
+     * @param Group                        $group
+     * @param Closure(PongResponse): void  $onCompletion
+     * @param Closure(EmptyResponse): void $onFail
      */
     public function postCreate(Group $group, Closure $onCompletion, Closure $onFail): void {
         $data = [
@@ -113,13 +114,13 @@ final class GroupService {
         $timestamp = microtime(true);
 
         Curl::postRequest(
-            Quark::URL . '/groups/create',
+            Service::URL . '/groups/create',
             $data,
             10,
-            Quark::defaultHeaders(),
+            Service::defaultHeaders(),
             function (?InternetRequestResult $result) use ($onCompletion, $onFail, $timestamp): void {
                 if ($result === null) {
-                    $onFail(new EmptyResponse(Quark::CODE_BAD_REQUEST_GATEWAY, 'No response'));
+                    $onFail(new EmptyResponse(Service::CODE_BAD_REQUEST_GATEWAY, 'No response'));
 
                     return;
                 }
@@ -127,7 +128,7 @@ final class GroupService {
                 $response = json_decode($result->getBody(), true);
                 $code = $result->getCode();
 
-                if ($code !== Quark::CODE_OK) {
+                if ($code !== Service::CODE_OK) {
                     $onFail(EmptyResponse::create(
                         $code,
                         is_array($response) && isset($response['message']) ? $response['message'] : null

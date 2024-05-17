@@ -4,13 +4,15 @@ declare(strict_types=1);
 
 namespace bitrule\quark\command;
 
+use bitrule\gorufus\object\query\PlayerState;
 use bitrule\quark\object\grant\GrantData;
 use bitrule\quark\object\GrantsInfo;
 use bitrule\quark\Quark;
 use bitrule\quark\service\GrantsService;
 use bitrule\quark\service\GroupService;
-use bitrule\quark\service\response\EmptyResponse;
-use bitrule\quark\service\response\PongResponse;
+use bitrule\services\response\EmptyResponse;
+use bitrule\services\response\PongResponse;
+use bitrule\services\Service;
 use pocketmine\command\Command;
 use pocketmine\command\CommandSender;
 use pocketmine\player\Player;
@@ -61,10 +63,10 @@ final class GrantCommand extends Command {
         $timestamp = isset($args[2]) ? Quark::parseFromInput($args[2]) : null;
 
         GrantsService::getInstance()->requestGrants(
-            GrantsService::createQueryByName($args[0], false, 'active'),
+            Service::createQueryByName($args[0], PlayerState::OFFLINE) . GrantsService::QUERY_TYPE . 'active',
             function (GrantsInfo $grantsInfo) use ($timestamp, $scope, $sender, $group): void {
                 $activeGrantData = $grantsInfo->getActiveGrantByGroup($group->getId());
-                if ($scope !== null && $activeGrantData !== null && $activeGrantData->hasScope($scope)) {
+                if ($activeGrantData !== null && ($scope === null || $activeGrantData->hasScope($scope))) {
                     $sender->sendMessage(TextFormat::RED . $grantsInfo->getKnownName() . ' already has this group!');
 
                     return;

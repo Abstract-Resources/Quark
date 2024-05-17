@@ -4,19 +4,22 @@ declare(strict_types=1);
 
 namespace bitrule\quark\service;
 
+use bitrule\gorufus\object\query\PlayerState;
 use bitrule\quark\object\grant\GrantData;
 use bitrule\quark\object\GrantsInfo;
 use bitrule\quark\Quark;
-use bitrule\quark\service\response\EmptyResponse;
-use bitrule\quark\service\response\PongResponse;
+use bitrule\services\response\EmptyResponse;
+use bitrule\services\response\PongResponse;
+use bitrule\services\Service;
 use Closure;
 use libasynCurl\Curl;
 use pocketmine\utils\InternetRequestResult;
-use pocketmine\utils\ObjectSet;
 use pocketmine\utils\SingletonTrait;
 use pocketmine\utils\TextFormat;
 use RuntimeException;
 use function array_map;
+use function array_search;
+use function in_array;
 use function is_array;
 use function json_decode;
 use function microtime;
@@ -27,8 +30,6 @@ final class GrantsService {
         reset as private;
     }
 
-    public const PLAYER_NOT_FOUND_RESPONSE = 'Player not found';
-
     public const QUERY_XUID = '?xuid=';
     public const QUERY_NAME = '?name=';
     public const QUERY_STATE = '&state=';
@@ -36,12 +37,8 @@ final class GrantsService {
 
     /** @var array<string, GrantsInfo> */
     private array $grantsInfo = [];
-    /** @var ObjectSet<string> */
-    private ObjectSet $failedRequests;
-
-    public function init(): void {
-        $this->failedRequests = new ObjectSet();
-    }
+    /** @var string[] */
+    private array $failedRequests = [];
 
     /**
      * @param GrantsInfo $grantsInfo
@@ -60,25 +57,18 @@ final class GrantsService {
     }
 
     /**
-     * @phpstan-return ObjectSet<string>
-     */
-    public function getFailedRequests(): ObjectSet {
-        return $this->failedRequests;
-    }
-
-    /**
      * @param string  $query
      * @param Closure(GrantsInfo): void $onCompletion
      * @param Closure(EmptyResponse): void $onFail
      */
     public function requestGrants(string $query, Closure $onCompletion, Closure $onFail): void {
         Curl::getRequest(
-            Quark::URL . '/grants' . $query,
+            Service::URL . '/grants' . $query,
             10,
-            Quark::defaultHeaders(),
+            Service::defaultHeaders(),
             function (?InternetRequestResult $result) use ($onCompletion, $onFail): void {
                 if ($result === null) {
-                    $onFail(EmptyResponse::create(Quark::CODE_BAD_REQUEST_GATEWAY, 'No response'));
+                    $onFail(EmptyResponse::create(Service::CODE_BAD_REQUEST_GATEWAY, 'No response'));
 
                     return;
                 }
@@ -87,7 +77,7 @@ final class GrantsService {
                 $response = json_decode($result->getBody(), true);
                 $message = is_array($response) && isset($response['message']) ? $response['message'] : null;
 
-                if ($code !== Quark::CODE_OK) {
+                if ($code !== Service::CODE_OK) {
                     $onFail(EmptyResponse::create(
                         $code,
                         $message
@@ -97,19 +87,19 @@ final class GrantsService {
                 }
 
                 if (!is_array($response)) {
-                    $onFail(EmptyResponse::create(Quark::CODE_INTERNAL_SERVER_ERROR, 'Invalid response'));
+                    $onFail(EmptyResponse::create(Service::CODE_INTERNAL_SERVER_ERROR, 'Invalid response'));
 
                     return;
                 }
 
                 if (!isset($response['known_name'])) {
-                    $onFail(EmptyResponse::create(Quark::CODE_INTERNAL_SERVER_ERROR, self::PLAYER_NOT_FOUND_RESPONSE));
+                    $onFail(EmptyResponse::create(Service::CODE_INTERNAL_SERVER_ERROR, Service::PLAYER_NOT_FOUND_RESPONSE));
 
                     return;
                 }
 
                 if (!isset($response['state']) || !isset($response['xuid'])) {
-                    $onFail(EmptyResponse::create(Quark::CODE_INTERNAL_SERVER_ERROR, 'State or xuid not found in response'));
+                    $onFail(EmptyResponse::create(Service::CODE_INTERNAL_SERVER_ERROR, 'State or xuid not found in response'));
 
                     return;
                 }
@@ -117,7 +107,7 @@ final class GrantsService {
                 $onCompletion(new GrantsInfo(
                     $response['xuid'],
                     $response['known_name'],
-                    $response['state'],
+                    PlayerState::valueOf($response['state']),
                     array_map(fn(array $grantData) => GrantData::wrap($grantData), $response['active'] ?? []),
                     array_map(fn(array $grantData) => GrantData::wrap($grantData), $response['expired'] ?? [])
                 ));
@@ -150,13 +140,13 @@ final class GrantsService {
         $timestamp = microtime(true);
 
         Curl::postRequest(
-            Quark::URL . '/grants?state=' . $grantsInfo->getState(),
+            Service::URL . '/grants?state=' . strtolower($grantsInfo->getState()->name),
             $data,
             10,
-            Quark::defaultHeaders(),
+            Service::defaultHeaders(),
             function (?InternetRequestResult $result) use ($timestamp, $onCompletion, $onFail): void {
                 if ($result === null) {
-                    $onFail(EmptyResponse::create(Quark::CODE_BAD_REQUEST_GATEWAY, 'No response'));
+                    $onFail(EmptyResponse::create(Service::CODE_BAD_REQUEST_GATEWAY, 'No response'));
 
                     return;
                 }
@@ -165,7 +155,7 @@ final class GrantsService {
                 $response = json_decode($result->getBody(), true);
                 $message = is_array($response) && isset($response['message']) ? $response['message'] : null;
 
-                if ($code !== Quark::CODE_OK) {
+                if ($code !== Service::CODE_OK) {
                     $onFail(EmptyResponse::create(
                         $code,
                         $message
@@ -175,7 +165,7 @@ final class GrantsService {
                 }
 
                 if ($message === null) {
-                    $onFail(EmptyResponse::create(Quark::CODE_INTERNAL_SERVER_ERROR, 'Invalid response'));
+                    $onFail(EmptyResponse::create(Service::CODE_INTERNAL_SERVER_ERROR, 'Invalid response'));
 
                     return;
                 }
@@ -196,19 +186,19 @@ final class GrantsService {
         unset($this->grantsInfo[$xuid]);
 
         Curl::postRequest(
-            Quark::URL . '/grants/unload',
+            Service::URL . '/grants/unload',
             [
             	'xuid' => $xuid,
             	'timestamp' => Quark::now(),
             ],
             10,
-            Quark::defaultHeaders(),
+            Service::defaultHeaders(),
             function (?InternetRequestResult $result) use ($xuid): void {
                 if ($result === null) {
                     throw new RuntimeException('Failed to unload grants');
                 }
 
-                if ($result->getCode() === Quark::CODE_OK) {
+                if ($result->getCode() === Service::CODE_OK) {
                     Quark::getInstance()->getLogger()->info(TextFormat::GREEN . 'Unloaded grants for ' . $xuid);
                 } else {
                     Quark::getInstance()->getLogger()->error('Failed to unload grants for ' . $xuid . ': ' . EmptyResponse::create($result->getCode())->getMessage());
@@ -219,23 +209,29 @@ final class GrantsService {
 
     /**
      * @param string $xuid
-     * @param bool   $online
-     * @param string $type
-     *
-     * @return string
      */
-    public static function createQueryByXuid(string $xuid, bool $online, string $type): string {
-        return self::QUERY_XUID . $xuid . self::QUERY_STATE . ($online ? 'online' : 'offline') . self::QUERY_TYPE . $type;
+    public function addFailedRequest(string $xuid): void {
+        $this->failedRequests[] = $xuid;
     }
 
     /**
-     * @param string $name
-     * @param bool   $online
-     * @param string $type
+     * @param string $xuid
      *
-     * @return string
+     * @return bool
      */
-    public static function createQueryByName(string $name, bool $online, string $type): string {
-        return self::QUERY_NAME . $name . self::QUERY_STATE . ($online ? 'online' : 'offline') . self::QUERY_TYPE . $type;
+    public function hasFailedRequest(string $xuid): bool {
+        return in_array($xuid, $this->failedRequests, true);
+    }
+
+    /**
+     * @param string $xuid
+     */
+    public function removeFailedRequest(string $xuid): void {
+        $index = array_search($xuid, $this->failedRequests, true);
+        if ($index === false) {
+            throw new RuntimeException('Failed request not found');
+        }
+
+        unset($this->failedRequests[$index]);
     }
 }

@@ -11,20 +11,17 @@ use bitrule\quark\listener\PlayerJoinListener;
 use bitrule\quark\listener\PlayerLoginListener;
 use bitrule\quark\listener\PlayerPreLoginListener;
 use bitrule\quark\listener\PlayerQuitListener;
-use bitrule\quark\service\GrantsService;
 use bitrule\quark\service\GroupService;
+use bitrule\services\Service;
 use DateInterval;
 use DateTime;
 use Exception;
-use InvalidArgumentException;
-use libasynCurl\Curl;
 use pocketmine\plugin\PluginBase;
 use pocketmine\utils\SingletonTrait;
 use pocketmine\utils\TextFormat;
 use function date;
-use function is_file;
+use function is_bool;
 use function is_numeric;
-use function is_string;
 use function str_split;
 
 final class Quark extends PluginBase {
@@ -33,22 +30,6 @@ final class Quark extends PluginBase {
         reset as private;
     }
 
-    // API URL
-    public const URL = 'http://play.hyrium.com:3000/api';
-
-    // HTTP status codes
-    public const CODE_OK = 200;
-    public const CODE_BAD_REQUEST = 400;
-    public const CODE_FORBIDDEN = 401;
-    public const CODE_UNAUTHORIZED = 403;
-    public const CODE_NOT_FOUND = 404;
-    public const CODE_INTERNAL_SERVER_ERROR = 500;
-    public const CODE_BAD_REQUEST_GATEWAY = 502;
-
-    private array $defaultHeaders = [
-    	'Content-Type: application/json'
-    ];
-
     protected function onLoad(): void {
         $this->saveDefaultConfig();
     }
@@ -56,40 +37,9 @@ final class Quark extends PluginBase {
     protected function onEnable(): void {
         self::setInstance($this);
 
-        $bootstrap = 'phar://' . $this->getServer()->getPluginPath() . $this->getName() . '.phar/vendor/autoload.php';
-        if (!is_file($bootstrap)) {
-            $this->getLogger()->error('Could not find autoload.php in plugin phar, directory: ' . $bootstrap);
-            $this->getServer()->getPluginManager()->disablePlugin($this);
-            return;
-        }
-
-        require_once $bootstrap;
-
-        try {
-            Curl::register($this);
-        } catch (Exception $e) {
-            if ($e instanceof InvalidArgumentException) {
-                $this->getLogger()->warning('libasynCurl is already loaded!');
-
-                return;
-            }
-
-            $this->getLogger()->logException($e);
-        }
-
-        $this->saveDefaultConfig();
-
-        $apiKey = $this->getConfig()->get('api-key');
-        if (!is_string($apiKey)) {
-            throw new InvalidArgumentException('Invalid API key');
-        }
-
-        echo 'API Key: ' . $apiKey . PHP_EOL;
-
-        $this->defaultHeaders[] = 'X-API-KEY: ' . $apiKey;
+        Service::getInstance()->load($this);
 
         GroupService::getInstance()->loadAll();
-        GrantsService::getInstance()->init();
 
         $this->getServer()->getCommandMap()->registerAll('quart', [
         	new GroupCommand('group', 'Manage our network groups'),
@@ -101,13 +51,6 @@ final class Quark extends PluginBase {
         $this->getServer()->getPluginManager()->registerEvents(new PlayerJoinListener(), $this);
         $this->getServer()->getPluginManager()->registerEvents(new PlayerChatListener(), $this);
         $this->getServer()->getPluginManager()->registerEvents(new PlayerQuitListener(), $this);
-    }
-
-    /**
-     * @return array
-     */
-    public static function defaultHeaders(): array {
-        return self::getInstance()->defaultHeaders;
     }
 
     /**
@@ -167,7 +110,7 @@ final class Quark extends PluginBase {
      * @throws Exception
      */
     private static function convertInputToValue(int $value, string $unit): DateInterval {
-        return match ($unit) {
+        $dateInterval = match ($unit) {
             'M' => DateInterval::createFromDateString($value . ' months'),
             'h' => DateInterval::createFromDateString($value . ' hours'),
             'd' => DateInterval::createFromDateString($value . ' days'),
@@ -176,5 +119,11 @@ final class Quark extends PluginBase {
             'y' => DateInterval::createFromDateString($value . ' years'),
             default => throw new Exception('Invalid unit')
         };
+
+        if (is_bool($dateInterval)) {
+            throw new Exception('Invalid unit');
+        }
+
+        return $dateInterval;
     }
 }

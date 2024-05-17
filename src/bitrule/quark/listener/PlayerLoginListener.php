@@ -19,8 +19,11 @@ final class PlayerLoginListener implements Listener {
      */
     public function onPlayerLoginEvent(PlayerLoginEvent $ev): void {
         $player = $ev->getPlayer();
-        if (GrantsService::getInstance()->getFailedRequests()->contains($player->getXuid())) {
+        if (GrantsService::getInstance()->hasFailedRequest($player->getXuid())) {
             $ev->setKickMessage(TextFormat::RED . 'Failed to load your grants, please try again later');
+            $ev->cancel();
+
+            GrantsService::getInstance()->removeFailedRequest($player->getXuid());
 
             return;
         }

@@ -4,6 +4,8 @@ author: bitrule
 version: "1.0"
 api: 5.0.0
 main: bitrule\quark\Quark
+softdepend:
+- Gorufus
 permissions:
   quark.command.group:
     description: Allows the player to use the /quark command

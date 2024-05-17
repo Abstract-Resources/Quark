@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace bitrule\quark\object;
 
+use bitrule\gorufus\object\query\PlayerState;
 use bitrule\quark\object\grant\GrantData;
 use bitrule\quark\object\group\Group;
 use bitrule\quark\service\GroupService;
@@ -13,7 +14,7 @@ final class GrantsInfo {
     public function __construct(
         private readonly string $xuid,
         private readonly string $knownName,
-        private readonly string $state,
+        private readonly PlayerState $state,
         private array $activeGrants = [],
         private array $expiredGrants = []
     ) {}
@@ -33,9 +34,9 @@ final class GrantsInfo {
     }
 
     /**
-     * @return string
+     * @return PlayerState
      */
-    public function getState(): string {
+    public function getState(): PlayerState {
         return $this->state;
     }
 
