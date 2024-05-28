@@ -95,7 +95,7 @@ final class GrantsInfo {
     public function getHighestGrant(): ?GrantData {
         /** @var GrantData|null $highestGrant */
         $highestGrant = null;
-        foreach ($this->activeGrants as $index => $grant) {
+        foreach ($this->activeGrants as $grant) {
             if ($highestGrant === null) {
                 $highestGrant = $grant;
 
@@ -106,13 +106,7 @@ final class GrantsInfo {
             if ($highestGroup === null) continue;
 
             $group = GroupService::getInstance()->getGroupById($grant->getGroupId());
-            if ($group === null) {
-                unset($this->activeGrants[$index]);
-
-                continue;
-            }
-
-            if ($group->getPriority() <= $highestGroup->getPriority()) continue;
+            if ($group === null || $group->getPriority() <= $highestGroup->getPriority()) continue;
 
             $highestGrant = $grant;
         }

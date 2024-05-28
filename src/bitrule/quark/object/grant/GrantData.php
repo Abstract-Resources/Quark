@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace bitrule\quark\object\grant;
 
-use bitrule\quark\Quark;
+use bitrule\gorufus\Gorufus;
 use Ramsey\Uuid\Uuid;
 use function count;
 use function explode;
@@ -147,7 +147,7 @@ final class GrantData {
         return new self (
             Uuid::uuid4()->toString(),
             $groupId,
-            Quark::now(),
+            Gorufus::now(),
             $expiresAt,
             null,
             $whoGranted,

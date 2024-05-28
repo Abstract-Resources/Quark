@@ -15,14 +15,11 @@ use Closure;
 use libasynCurl\Curl;
 use pocketmine\utils\InternetRequestResult;
 use pocketmine\utils\SingletonTrait;
-use pocketmine\utils\TextFormat;
-use RuntimeException;
 use function array_map;
-use function array_search;
-use function in_array;
 use function is_array;
 use function json_decode;
 use function microtime;
+use function strtolower;
 
 final class GrantsService {
     use SingletonTrait {
@@ -57,13 +54,28 @@ final class GrantsService {
     }
 
     /**
-     * @param string  $query
-     * @param Closure(GrantsInfo): void $onCompletion
+     * @param string                       $id
+     * @param string                       $type
+     * @param PlayerState                  $state
+     * @param Closure(GrantsInfo): void    $onCompletion
      * @param Closure(EmptyResponse): void $onFail
      */
-    public function requestGrants(string $query, Closure $onCompletion, Closure $onFail): void {
+    public function lookup(string $id, string $type, PlayerState $state, Closure $onCompletion, Closure $onFail): void {
+        if (!Service::getInstance()->isRunning()) {
+            $onFail(EmptyResponse::create(Service::CODE_BAD_REQUEST_GATEWAY, 'Service is not running'));
+
+            return;
+        }
+
+        $grantsInfo = $this->getGrantsInfo($id);
+        if ($grantsInfo !== null) {
+            $onCompletion($grantsInfo);
+
+            return;
+        }
+
         Curl::getRequest(
-            Service::URL . '/grants' . $query,
+            Service::URL . '/grants/' . $id . '/lookup/' . $type . '?state=' . $state->name,
             10,
             Service::defaultHeaders(),
             function (?InternetRequestResult $result) use ($onCompletion, $onFail): void {
@@ -140,7 +152,7 @@ final class GrantsService {
         $timestamp = microtime(true);
 
         Curl::postRequest(
-            Service::URL . '/grants?state=' . strtolower($grantsInfo->getState()->name),
+            Service::URL . '/grants/' . $grantsInfo->getXuid() . '/save?state=' . strtolower($grantsInfo->getState()->name),
             $data,
             10,
             Service::defaultHeaders(),
@@ -184,54 +196,5 @@ final class GrantsService {
      */
     public function unload(string $xuid): void {
         unset($this->grantsInfo[$xuid]);
-
-        Curl::postRequest(
-            Service::URL . '/grants/unload',
-            [
-            	'xuid' => $xuid,
-            	'timestamp' => Quark::now(),
-            ],
-            10,
-            Service::defaultHeaders(),
-            function (?InternetRequestResult $result) use ($xuid): void {
-                if ($result === null) {
-                    throw new RuntimeException('Failed to unload grants');
-                }
-
-                if ($result->getCode() === Service::CODE_OK) {
-                    Quark::getInstance()->getLogger()->info(TextFormat::GREEN . 'Unloaded grants for ' . $xuid);
-                } else {
-                    Quark::getInstance()->getLogger()->error('Failed to unload grants for ' . $xuid . ': ' . EmptyResponse::create($result->getCode())->getMessage());
-                }
-            }
-        );
-    }
-
-    /**
-     * @param string $xuid
-     */
-    public function addFailedRequest(string $xuid): void {
-        $this->failedRequests[] = $xuid;
-    }
-
-    /**
-     * @param string $xuid
-     *
-     * @return bool
-     */
-    public function hasFailedRequest(string $xuid): bool {
-        return in_array($xuid, $this->failedRequests, true);
-    }
-
-    /**
-     * @param string $xuid
-     */
-    public function removeFailedRequest(string $xuid): void {
-        $index = array_search($xuid, $this->failedRequests, true);
-        if ($index === false) {
-            throw new RuntimeException('Failed request not found');
-        }
-
-        unset($this->failedRequests[$index]);
     }
 }

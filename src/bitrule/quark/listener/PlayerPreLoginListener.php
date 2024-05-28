@@ -31,18 +31,20 @@ final class PlayerPreLoginListener implements Listener {
 
         $xuid = $playerInfo->getXuid();
 
-        GrantsService::getInstance()->requestGrants(
-            Service::createQueryByXuid($xuid, PlayerState::ONLINE) . GrantsService::QUERY_TYPE . 'active',
+        GrantsService::getInstance()->lookup(
+            $xuid,
+            'xuid',
+            PlayerState::ONLINE,
             function (GrantsInfo $grantsInfo): void {
                 GrantsService::getInstance()->cache($grantsInfo);
             },
             function (EmptyResponse $emptyResponse) use ($xuid): void {
                 if ($emptyResponse->getMessage() === Service::PLAYER_NOT_FOUND_RESPONSE) return;
 
-                GrantsService::getInstance()->addFailedRequest($xuid);
+                Quark::getInstance()->getLogger()->error('An error occurred while requesting grants for player ' . $xuid);
+                Quark::getInstance()->getLogger()->error('Exception: ' . $emptyResponse->getMessage());
 
-                Quark::getInstance()->getLogger()->error('Failed to load grants for ' . $xuid . ' - ' . date('Y-m-d H:i:s'));
-                Quark::getInstance()->getLogger()->error('Message: ' . $emptyResponse->getMessage());
+                Service::getInstance()->addFailedRequest($xuid);
             }
         );
     }

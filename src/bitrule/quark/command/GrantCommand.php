@@ -4,15 +4,14 @@ declare(strict_types=1);
 
 namespace bitrule\quark\command;
 
+use bitrule\gorufus\Gorufus;
 use bitrule\gorufus\object\query\PlayerState;
 use bitrule\quark\object\grant\GrantData;
 use bitrule\quark\object\GrantsInfo;
-use bitrule\quark\Quark;
 use bitrule\quark\service\GrantsService;
 use bitrule\quark\service\GroupService;
 use bitrule\services\response\EmptyResponse;
 use bitrule\services\response\PongResponse;
-use bitrule\services\Service;
 use pocketmine\command\Command;
 use pocketmine\command\CommandSender;
 use pocketmine\player\Player;
@@ -60,10 +59,15 @@ final class GrantCommand extends Command {
             $scope = $lastArg;
         }
 
-        $timestamp = isset($args[2]) ? Quark::parseFromInput($args[2]) : null;
+        $timestamp = isset($args[2]) ? Gorufus::parseFromInput($args[2]) : null;
 
-        GrantsService::getInstance()->requestGrants(
-            Service::createQueryByName($args[0], PlayerState::OFFLINE) . GrantsService::QUERY_TYPE . 'active',
+        // TODO: Fix this because everytime you run this command, it will always request the grants to our storage
+        // If the target is online at the same server, we do not update the local grants.
+        // BTW I need everything of this route to be able to fix this.
+        GrantsService::getInstance()->lookup(
+            $args[0],
+            'name',
+            PlayerState::OFFLINE,
             function (GrantsInfo $grantsInfo) use ($timestamp, $scope, $sender, $group): void {
                 $activeGrantData = $grantsInfo->getActiveGrantByGroup($group->getId());
                 if ($activeGrantData !== null && ($scope === null || $activeGrantData->hasScope($scope))) {

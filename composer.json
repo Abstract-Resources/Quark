@@ -21,6 +21,7 @@
   "repositories": [
     {"type": "vcs", "url": "git@github.com:Abstract-Resources/command-framework"},
     {"type": "vcs", "url": "git@github.com:Hyrium/Gorufus"},
+    {"type": "vcs", "url": "git@github.com:Hyrium/HyriumParties"},
     {"type": "vcs", "url": "git@github.com:NetherGamesMC/libasynCurl.git" }
   ],
 

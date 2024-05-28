@@ -8,6 +8,7 @@ use bitrule\quark\service\GroupService;
 use pocketmine\lang\Translatable;
 use pocketmine\player\chat\ChatFormatter;
 use pocketmine\utils\TextFormat;
+use function var_dump;
 
 final class QuarkChatFormatter implements ChatFormatter {
 
@@ -26,6 +27,8 @@ final class QuarkChatFormatter implements ChatFormatter {
         if ($highestGroup === null) {
             $highestGroup = GroupService::getInstance()->getGroupByName('default');
         }
+
+        var_dump($this->grantsInfo->getActiveGrants());
 
         $prefix = $highestGroup !== null && $highestGroup->getPrefix() !== null ? $highestGroup->getPrefix() : TextFormat::GRAY;
         $suffix = $highestGroup !== null && $highestGroup->getSuffix() !== null ? $highestGroup->getSuffix() : TextFormat::DARK_GRAY . ': ';
